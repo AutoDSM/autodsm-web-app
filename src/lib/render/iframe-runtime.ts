@@ -267,7 +267,7 @@ export const IFRAME_RUNTIME_SOURCE = /* js */ `
 
   /**
    * Pre-scan every vfs file to collect the named imports esbuild will
-   * need per specifier. Stubs must emit explicit `export const X`
+   * need per specifier. Stubs must emit explicit 'export const X'
    * statements for each of these names, otherwise esbuild fails with
    * "No matching export" at bundle time.
    */
