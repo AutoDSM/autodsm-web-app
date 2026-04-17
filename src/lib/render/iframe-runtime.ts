@@ -445,11 +445,12 @@ export const IFRAME_RUNTIME_SOURCE = /* js */ `
       await loadCore();
       const { js } = await bundleModule(config);
 
-      // Execute the IIFE bundle. It assigns to window.__AUTODSM_MOD__.
+      // Execute the IIFE bundle. esbuild emits 'var __AUTODSM_MOD__ = (...)',
+      // which in a new Function scope is a local var, NOT a window global.
+      // We append a return statement to surface the namespace object.
       // No dynamic imports — works in null-origin sandbox.
-      delete window.__AUTODSM_MOD__;
-      (new Function(js))();
-      const mod = window.__AUTODSM_MOD__ || {};
+      const runner = new Function(js + '\\n;return (typeof __AUTODSM_MOD__ !== "undefined") ? __AUTODSM_MOD__ : (window.__AUTODSM_MOD__ || {});');
+      const mod = runner() || {};
 
       // Prefer explicit name match, then default export, then a heuristic
       // scan for anything that looks like a React component (function, or
