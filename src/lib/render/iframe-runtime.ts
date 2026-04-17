@@ -388,10 +388,26 @@ export const IFRAME_RUNTIME_SOURCE = /* js */ `
       (new Function(js))();
       const mod = window.__AUTODSM_MOD__ || {};
 
-      const Component =
+      // Prefer explicit name match, then default export, then a heuristic
+      // scan for anything that looks like a React component (function, or
+      // an object with $$typeof — forwardRef/memo).
+      function looksLikeComponent(v) {
+        if (typeof v === 'function') return true;
+        if (v && typeof v === 'object' && (v.$$typeof || v.render || v.type)) return true;
+        return false;
+      }
+      let Component =
         mod[config.entry_module] ||
         mod.default ||
-        Object.values(mod).find((v) => typeof v === 'function');
+        Object.values(mod).find(looksLikeComponent);
+      // Also try common casings — e.g. entry 'SpinnerEmpty' with export
+      // 'spinnerEmpty' or an export matching the filename stem.
+      if (!Component) {
+        const nm = (config.entry_module + '').toLowerCase();
+        for (const [k, v] of Object.entries(mod)) {
+          if (k.toLowerCase() === nm && looksLikeComponent(v)) { Component = v; break; }
+        }
+      }
       if (!Component) throw new Error('Could not locate exported component: ' + config.entry_module);
 
       currentComponent = Component;

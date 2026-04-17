@@ -308,7 +308,12 @@ export function parseComponent({ filePath, source, relatedFiles, aliases }: Pars
   /**
    * Rewrite aliased imports in a source file to absolute virtual-FS paths
    * (leading slash) so the runtime bundler doesn't treat them as bare.
-   * Relative imports are left untouched.
+   *
+   * We rewrite ALWAYS when the spec matches an alias key — even if the
+   * target file isn't present in `relatedFiles`. That way, when the
+   * runtime can't find the file in its vfs, it stubs it with a tolerant
+   * Proxy instead of falling through to the `bare` namespace (which would
+   * try to resolve it as an npm package on esm.sh, and fail).
    */
   function rewriteAliases(src: string): string {
     if (!aliases) return src;
@@ -316,9 +321,20 @@ export function parseComponent({ filePath, source, relatedFiles, aliases }: Pars
       /((?:from|import)\s*['"])([^.\/][^'"]*)(['"])/g,
       (full, pre, spec, post) => {
         if (!isAliased(spec)) return full;
+        // Try full resolution first (gives us the right extension path).
         const hit = resolveAlias(spec);
-        if (!hit) return full;
-        return pre + hit.key + post;
+        if (hit) return pre + hit.key + post;
+        // Fallback: rewrite to a best-guess absolute path using the first
+        // alias target. Runtime will stub this if the file is absent.
+        for (const [aliasKey, prefixes] of Object.entries(aliases!)) {
+          const stripped = aliasKey.endsWith('/') ? aliasKey.slice(0, -1) : aliasKey;
+          if (spec !== stripped && !spec.startsWith(stripped + '/')) continue;
+          const tail = spec.slice(stripped.length).replace(/^\//, '');
+          const prefix = (prefixes[0] || '').replace(/^\//, '').replace(/\/$/, '');
+          const guess = '/' + [prefix, tail].filter(Boolean).join('/');
+          return pre + guess + post;
+        }
+        return full;
       },
     );
   }

@@ -191,9 +191,12 @@ export async function scanRepo(
       await enqueueReferenced(src, dir, neededSiblings);
     }
     let extraFetched = 0;
-    const MAX_EXTRA = 600;
-    const CONCURRENCY = 12;
-    for (let depth = 0; depth < 4 && neededSiblings.size > 0 && extraFetched < MAX_EXTRA; depth++) {
+    // Raised from 600 → 1500 so multi-variant monorepos (e.g. shadcn-ui/ui
+    // with styles/base-nova + radix-nova + registry/new-york-v4) can resolve
+    // all of a component's transitive alias imports within the scan.
+    const MAX_EXTRA = 1500;
+    const CONCURRENCY = 16;
+    for (let depth = 0; depth < 5 && neededSiblings.size > 0 && extraFetched < MAX_EXTRA; depth++) {
       const batch = Array.from(neededSiblings).filter((p) => !relatedFiles.has('/' + p));
       neededSiblings.clear();
       // Cap the batch so we never exceed MAX_EXTRA total fetches.
