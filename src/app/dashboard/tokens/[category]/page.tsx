@@ -19,7 +19,7 @@ export default function TokenCategoryPage() {
     <>
       <TopBar align="left" />
       <div className="flex-1 overflow-y-auto">
-        <div className="px-10 py-8 max-w-[1080px] mx-auto">
+        <div className="px-4 md:px-10 py-6 md:py-8 max-w-[1080px] mx-auto">
           {tokens.length === 0 ? (
             <EmptyState category={category} />
           ) : category === 'colors' ? (

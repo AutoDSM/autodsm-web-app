@@ -46,7 +46,7 @@ export default function DashboardPage() {
         </div>
 
         <div
-          className="mt-6 rounded-xl border border-t-default p-6"
+          className="mt-6 rounded-xl border border-t-default p-4 md:p-6 overflow-hidden"
           style={{ background: 'var(--bg-elevated)' }}
         >
           <h2 className="text-[14px] font-medium text-t-secondary mb-4">Recent changes</h2>
@@ -58,7 +58,7 @@ export default function DashboardPage() {
                 <li
                   key={c.sha}
                   className={
-                    'flex items-center justify-between py-3 ' +
+                    'flex items-center justify-between gap-3 py-3 min-w-0 ' +
                     (i < result.commits.length - 1 ? 'border-b border-t-subtle' : '')
                   }
                 >
@@ -66,11 +66,11 @@ export default function DashboardPage() {
                     href={c.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[14px] font-medium text-t-primary truncate mr-4 hover:underline underline-offset-4"
+                    className="flex-1 min-w-0 text-[13px] md:text-[14px] font-medium text-t-primary truncate hover:underline underline-offset-4"
                   >
                     {c.message}
                   </a>
-                  <span className="text-[13px] text-t-tertiary shrink-0 font-mono">
+                  <span className="text-[12px] md:text-[13px] text-t-tertiary shrink-0 font-mono">
                     {formatRelativeDate(c.date)}
                   </span>
                 </li>

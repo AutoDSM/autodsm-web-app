@@ -86,7 +86,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <div className="flex-1 pt-12 md:pt-4 px-2 md:pr-4 md:pl-0 pb-2 md:pb-4">
+      <div className="flex-1 min-w-0 pt-12 md:pt-4 px-2 md:pr-4 md:pl-0 pb-2 md:pb-4">
         <div
           className="min-h-[calc(100vh-64px)] md:h-[calc(100vh-32px)] rounded-xl md:rounded-2xl border border-t-default flex flex-col overflow-hidden"
           style={{ background: 'var(--bg-secondary)' }}

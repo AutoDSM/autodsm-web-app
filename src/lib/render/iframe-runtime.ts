@@ -3,12 +3,16 @@
  *
  * Responsibilities:
  *   1. Initialise esbuild-wasm (single-threaded, no SAB required).
- *   2. On MOUNT: transform every .ts/.tsx/.js/.jsx in config.files into JS,
- *      rewrite bare imports to esm.sh URLs, rewrite relative imports to
- *      sibling blob URLs, then `import()` the entry module via a blob URL.
+ *   2. On MOUNT: bundle all files in config.files into a single ESM module
+ *      (via an in-memory virtual-filesystem plugin), with:
+ *        - bare imports routed to esm.sh as externals
+ *        - relative imports resolved against the virtual FS
+ *        - missing relative imports stubbed with a tolerant Proxy
+ *      Then execute by dynamic-importing a blob URL created inside this
+ *      iframe (same null-origin as the document \u2014 import() works).
  *   3. Render the resolved component with initial props, mount into #root.
  *   4. On UPDATE_PROPS: re-render with new props using the same root.
- *   5. Any error → postMessage RENDER_ERROR back to the parent.
+ *   5. Any error \u2192 postMessage RENDER_ERROR back to the parent.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -21,7 +25,6 @@ export const IFRAME_RUNTIME_SOURCE = /* js */ `
 
   let esbuild;
   let esbuildReady;
-  let currentConfig = null;
   let currentRoot = null;
   let currentComponent = null;
   let currentProps = {};
@@ -55,23 +58,6 @@ export const IFRAME_RUNTIME_SOURCE = /* js */ `
     LucideIcons = L;
   }
 
-  // Rewrite bare imports: "clsx" → "https://esm.sh/clsx?bundle".
-  function rewriteBareImports(code) {
-    return code.replace(
-      /(from\\s+|import\\s+)(['"])([^'"./][^'"]*)\\2/g,
-      (_, kw, q, spec) => {
-        if (spec === 'react' || spec.startsWith('react/')) {
-          const tail = spec === 'react' ? '' : spec.slice(5);
-          return kw + q + ESM_BASE + '/react@19' + tail + q;
-        }
-        if (spec === 'react-dom' || spec.startsWith('react-dom/')) {
-          return kw + q + ESM_BASE + '/' + spec.replace('react-dom', 'react-dom@19') + q;
-        }
-        return kw + q + ESM_BASE + '/' + spec + '?bundle' + q;
-      },
-    );
-  }
-
   function loaderFor(path) {
     if (path.endsWith('.ts')) return 'ts';
     if (path.endsWith('.tsx')) return 'tsx';
@@ -79,105 +65,8 @@ export const IFRAME_RUNTIME_SOURCE = /* js */ `
     return 'js';
   }
 
-  async function transformAllFiles(config) {
-    await loadEsbuild();
-
-    // Pass 1: transform each source file (JSX → JS), keep relative imports
-    // intact. Rewrite bare imports to esm.sh URLs.
-    const transformed = new Map();
-    for (const [path, source] of Object.entries(config.files)) {
-      const out = await esbuild.transform(source, {
-        loader: loaderFor(path),
-        jsx: 'automatic',
-        jsxImportSource: 'react',
-        target: 'es2020',
-        format: 'esm',
-        sourcemap: 'inline',
-      });
-      transformed.set(path, rewriteBareImports(out.code));
-    }
-
-    // Pass 2: reserve a placeholder for each path so relative imports can
-    // refer to siblings before we mint blob URLs.
-    const placeholder = new Map();
-    for (const path of transformed.keys()) {
-      placeholder.set(
-        path,
-        '__AUTODSM_BLOB_' + Math.random().toString(36).slice(2) + '__',
-      );
-    }
-
-    // Stub module — returned when a relative import can't be resolved to a
-    // file in the virtual FS. Using a Proxy makes it tolerate arbitrary
-    // member access so the component still tries to render.
-    const stubSource = [
-      "const proxy = new Proxy(function(){ return null; }, {",
-      "  get: (_, k) => k === '__esModule' ? true : proxy,",
-      "  apply: () => null,",
-      "});",
-      "export default proxy;",
-      "export const cn = (...a) => a.filter(Boolean).join(' ');",
-    ].join('\\n');
-    const stubUrl = URL.createObjectURL(new Blob([stubSource], { type: 'text/javascript' }));
-    const missingImports = new Set();
-
-    // Pass 3: rewrite relative imports to placeholders (or stub when missing).
-    const withPlaceholders = new Map();
-    for (const [path, code] of transformed.entries()) {
-      const rewritten = code.replace(
-        /(from\\s+|import\\s+)(['"])(\\.[^'"]+)\\2/g,
-        (m, kw, q, rel) => {
-          const candidates = [
-            resolveRel(path, rel),
-            resolveRel(path, rel + '.ts'),
-            resolveRel(path, rel + '.tsx'),
-            resolveRel(path, rel + '.js'),
-            resolveRel(path, rel + '.jsx'),
-            resolveRel(path, rel + '/index.ts'),
-            resolveRel(path, rel + '/index.tsx'),
-            resolveRel(path, rel + '/index.js'),
-          ];
-          const hit = candidates.find((c) => placeholder.has(c));
-          if (hit) return kw + q + placeholder.get(hit) + q;
-          missingImports.add(rel);
-          return kw + q + stubUrl + q;
-        },
-      );
-      withPlaceholders.set(path, rewritten);
-    }
-    if (missingImports.size > 0) {
-      try { console.warn('[autoDSM] stubbed unresolved imports:', Array.from(missingImports)); } catch (e) {}
-    }
-
-    // Pass 4: mint real blob URLs, then swap placeholders for the real URLs
-    // via a second string replacement. (Blob URLs don't allow self-reference,
-    // so we have to do the swap in the source text before createObjectURL.)
-    const blobFor = new Map();
-    for (const [path, code] of withPlaceholders.entries()) {
-      const blob = new Blob([code], { type: 'text/javascript' });
-      blobFor.set(path, URL.createObjectURL(blob));
-    }
-    const finalUrls = new Map();
-    for (const [path, code] of withPlaceholders.entries()) {
-      let stitched = code;
-      for (const [otherPath, ph] of placeholder.entries()) {
-        if (stitched.indexOf(ph) !== -1) {
-          stitched = stitched.split(ph).join(blobFor.get(otherPath));
-        }
-      }
-      const b = new Blob([stitched], { type: 'text/javascript' });
-      finalUrls.set(path, URL.createObjectURL(b));
-    }
-    // Best-effort: release the first-generation blob URLs we no longer need.
-    for (const u of blobFor.values()) {
-      try { URL.revokeObjectURL(u); } catch (e) {}
-    }
-    return finalUrls;
-  }
-
-  function resolveRel(fromPath, rel) {
-    const stack = fromPath.split('/');
-    stack.pop();
+  function joinRel(dir, rel) {
+    const stack = dir ? dir.split('/') : [];
     for (const seg of rel.split('/')) {
       if (seg === '.' || seg === '') continue;
       if (seg === '..') stack.pop();
@@ -186,15 +75,121 @@ export const IFRAME_RUNTIME_SOURCE = /* js */ `
     return '/' + stack.filter(Boolean).join('/');
   }
 
+  function pickEntryPath(config) {
+    const candidates = Object.keys(config.files);
+    const entry = (config.entry_module + '').toLowerCase();
+    const byName = candidates.find((p) => {
+      const base = (p.split('/').pop() || '').replace(/\\.(tsx|ts|jsx|js)$/, '').toLowerCase();
+      return base === entry;
+    });
+    if (byName) return byName;
+    return candidates
+      .filter((p) => /\\.(tsx|jsx)$/.test(p))
+      .sort((a, b) => (config.files[b] || '').length - (config.files[a] || '').length)[0]
+      || candidates[0];
+  }
+
+  // Virtual-FS plugin. All import resolution (entry, relatives, bare) routes
+  // through here. Bare imports become \`external\` URLs to esm.sh \u2014 esbuild
+  // leaves them untouched in the output, which the browser then fetches
+  // directly at import-time.
+  function virtualFsPlugin(files, entryPath) {
+    return {
+      name: 'autodsm-virtual-fs',
+      setup(build) {
+        build.onResolve({ filter: /.*/ }, (args) => {
+          const p = args.path;
+          if (!args.importer) {
+            return { path: entryPath, namespace: 'vfs' };
+          }
+          if (p.startsWith('./') || p.startsWith('../')) {
+            const importerDir = args.resolveDir || args.importer.split('/').slice(0, -1).join('/');
+            const base = joinRel(importerDir, p);
+            const candidates = [
+              base, base + '.ts', base + '.tsx', base + '.js', base + '.jsx',
+              base + '/index.ts', base + '/index.tsx', base + '/index.js', base + '/index.jsx',
+            ];
+            const hit = candidates.find((c) => files[c] != null);
+            if (hit) return { path: hit, namespace: 'vfs' };
+            return { path: 'stub:' + p, namespace: 'stub' };
+          }
+          // Bare imports \u2192 esm.sh URLs, marked external so esbuild emits
+          // them as literal import statements in the output bundle.
+          if (p === 'react' || p.startsWith('react/')) {
+            const tail = p === 'react' ? '' : p.slice(5);
+            return { path: ESM_BASE + '/react@19' + tail, external: true };
+          }
+          if (p === 'react-dom' || p.startsWith('react-dom/')) {
+            return { path: ESM_BASE + '/' + p.replace('react-dom', 'react-dom@19'), external: true };
+          }
+          return { path: ESM_BASE + '/' + p + '?bundle', external: true };
+        });
+
+        build.onLoad({ filter: /.*/, namespace: 'vfs' }, (args) => {
+          const source = files[args.path] != null ? files[args.path] : '';
+          return {
+            contents: source,
+            loader: loaderFor(args.path),
+            resolveDir: args.path.split('/').slice(0, -1).join('/'),
+          };
+        });
+
+        // Stub module for unresolved relative imports. A tolerant Proxy
+        // stands in for the default export and common named exports, so
+        // the importer's render path survives.
+        build.onLoad({ filter: /.*/, namespace: 'stub' }, () => ({
+          contents: [
+            \`const proxy = new Proxy(function(){ return null; }, {\`,
+            \`  get: (_, k) => k === '__esModule' ? true : proxy,\`,
+            \`  apply: () => null,\`,
+            \`});\`,
+            \`export default proxy;\`,
+            \`export const cn = (...a) => a.filter(Boolean).join(' ');\`,
+          ].join('\\n'),
+          loader: 'js',
+        }));
+      },
+    };
+  }
+
+  async function bundleModule(config) {
+    await loadEsbuild();
+    const entryPath = pickEntryPath(config);
+    const result = await esbuild.build({
+      entryPoints: [entryPath],
+      bundle: true,
+      write: false,
+      format: 'esm',
+      target: 'es2020',
+      jsx: 'automatic',
+      jsxImportSource: 'react',
+      sourcemap: 'inline',
+      plugins: [virtualFsPlugin(config.files, entryPath)],
+      logLevel: 'silent',
+    });
+    const js = result.outputFiles && result.outputFiles[0] && result.outputFiles[0].text;
+    if (!js) throw new Error('esbuild produced no output.');
+    return { js, entryPath };
+  }
+
   async function mount(config) {
-    currentConfig = config;
     currentProps = { ...config.initial_props };
     try {
       await loadCore();
-      const urls = await transformAllFiles(config);
-      const entryPath = pickEntryPath(config, urls);
-      if (!entryPath) throw new Error('Entry module not found in render config files.');
-      const mod = await import(/* @vite-ignore */ urls.get(entryPath));
+      const { js } = await bundleModule(config);
+
+      // Execute the bundle via a blob-URL dynamic import. Blob URLs are
+      // same-origin with the iframe's document (both are null), so import()
+      // resolves them even under sandbox="allow-scripts".
+      const blob = new Blob([js], { type: 'text/javascript' });
+      const url = URL.createObjectURL(blob);
+      let mod;
+      try {
+        mod = await import(/* @vite-ignore */ url);
+      } finally {
+        try { URL.revokeObjectURL(url); } catch (e) {}
+      }
+
       const Component =
         mod[config.entry_module] ||
         mod.default ||
@@ -203,7 +198,6 @@ export const IFRAME_RUNTIME_SOURCE = /* js */ `
 
       currentComponent = Component;
       const rootEl = document.getElementById('root');
-      // Unmount any prior root before creating a new one.
       if (currentRoot) {
         try { currentRoot.unmount(); } catch (e) {}
       }
@@ -216,23 +210,6 @@ export const IFRAME_RUNTIME_SOURCE = /* js */ `
         error: { message: String(err && err.message || err), stack: err && err.stack },
       });
     }
-  }
-
-  function pickEntryPath(config, urls) {
-    const candidates = Array.from(urls.keys());
-    const entry = (config.entry_module + '').toLowerCase();
-    // 1) case-insensitive basename match, any extension.
-    const exact = candidates.find((p) => {
-      const base = p.split('/').pop() || '';
-      const noExt = base.replace(/\\.(tsx|ts|jsx|js)$/, '').toLowerCase();
-      return noExt === entry;
-    });
-    if (exact) return exact;
-    // 2) largest tsx/jsx file as a proxy for "the main one".
-    return candidates
-      .filter((p) => /\\.(tsx|jsx)$/.test(p))
-      .sort((a, b) => (config.files[b] || '').length - (config.files[a] || '').length)[0]
-      || candidates[0];
   }
 
   function render() {
@@ -265,7 +242,7 @@ export const IFRAME_RUNTIME_SOURCE = /* js */ `
 
   window.addEventListener('message', (ev) => {
     const data = ev.data || {};
-    if (data.source === 'autodsm-iframe') return; // ignore echoes
+    if (data.source === 'autodsm-iframe') return;
     if (data.type === 'MOUNT') {
       mount(data.config);
     } else if (data.type === 'UPDATE_PROPS') {
