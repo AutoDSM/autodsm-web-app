@@ -107,7 +107,21 @@ export const IFRAME_RUNTIME_SOURCE = /* js */ `
       );
     }
 
-    // Pass 3: rewrite relative imports to placeholders.
+    // Stub module — returned when a relative import can't be resolved to a
+    // file in the virtual FS. Using a Proxy makes it tolerate arbitrary
+    // member access so the component still tries to render.
+    const stubSource = [
+      "const proxy = new Proxy(function(){ return null; }, {",
+      "  get: (_, k) => k === '__esModule' ? true : proxy,",
+      "  apply: () => null,",
+      "});",
+      "export default proxy;",
+      "export const cn = (...a) => a.filter(Boolean).join(' ');",
+    ].join('\\n');
+    const stubUrl = URL.createObjectURL(new Blob([stubSource], { type: 'text/javascript' }));
+    const missingImports = new Set();
+
+    // Pass 3: rewrite relative imports to placeholders (or stub when missing).
     const withPlaceholders = new Map();
     for (const [path, code] of transformed.entries()) {
       const rewritten = code.replace(
@@ -124,10 +138,15 @@ export const IFRAME_RUNTIME_SOURCE = /* js */ `
             resolveRel(path, rel + '/index.js'),
           ];
           const hit = candidates.find((c) => placeholder.has(c));
-          return hit ? kw + q + placeholder.get(hit) + q : m;
+          if (hit) return kw + q + placeholder.get(hit) + q;
+          missingImports.add(rel);
+          return kw + q + stubUrl + q;
         },
       );
       withPlaceholders.set(path, rewritten);
+    }
+    if (missingImports.size > 0) {
+      try { console.warn('[autoDSM] stubbed unresolved imports:', Array.from(missingImports)); } catch (e) {}
     }
 
     // Pass 4: mint real blob URLs, then swap placeholders for the real URLs

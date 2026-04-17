@@ -45,19 +45,41 @@ export async function scanRepo(
 
     // ─── Framework gate ───────────────────────────────────────────────
     emit({ phase: 'fetching', message: 'Detecting framework…' });
-    const pkgEntry = tree.find((t) => t.path === 'package.json');
-    if (!pkgEntry) {
+    // Collect every package.json — root + up to ~20 sub-packages (handles
+    // monorepos like shadcn-ui/ui, turborepo, nx layouts).
+    const pkgEntries = tree
+      .filter((t) => t.type === 'blob' && (t.path === 'package.json' || /\bpackage\.json$/.test(t.path)))
+      .filter((t) => !/\bnode_modules\b/.test(t.path))
+      .slice(0, 20);
+    if (pkgEntries.length === 0) {
       emit({ phase: 'unsupported', reason: 'no_package_json', message: 'No package.json detected.' });
       return null;
     }
-    const pkgJson = await gh.getFile({ owner, name, branch: defaultBranch }, 'package.json');
-    const pkg = safeParseJson(pkgJson);
-    const deps = { ...(pkg?.dependencies ?? {}), ...(pkg?.devDependencies ?? {}), ...(pkg?.peerDependencies ?? {}) };
-    if (deps['vue'] || deps['svelte'] || deps['@angular/core'] || deps['solid-js']) {
+    let hasReact = false;
+    let sawNonReactFramework = false;
+    for (const p of pkgEntries) {
+      let parsed: ReturnType<typeof safeParseJson> = null;
+      try {
+        parsed = safeParseJson(
+          await gh.getFile({ owner, name, branch: defaultBranch }, p.path),
+        );
+      } catch { /* ignore */ }
+      if (!parsed) continue;
+      const deps = {
+        ...(parsed.dependencies ?? {}),
+        ...(parsed.devDependencies ?? {}),
+        ...(parsed.peerDependencies ?? {}),
+      };
+      if (deps['react']) hasReact = true;
+      if (deps['vue'] || deps['svelte'] || deps['@angular/core'] || deps['solid-js']) {
+        sawNonReactFramework = true;
+      }
+    }
+    if (!hasReact && sawNonReactFramework) {
       emit({ phase: 'unsupported', reason: 'non_react_framework', message: 'Non-React framework detected.' });
       return null;
     }
-    if (!deps['react']) {
+    if (!hasReact) {
       emit({ phase: 'unsupported', reason: 'no_react', message: 'React not found in dependencies.' });
       return null;
     }
@@ -75,12 +97,71 @@ export async function scanRepo(
     );
 
     // Build a local-files map for relative-import resolution during parsing.
+    // We pre-populate it with *every* .ts/.tsx under src or packages (capped)
+    // so that relative imports like `./container` or `../utils` resolve even
+    // when the imported file isn't itself a top-level component.
     const relatedFiles = new Map<string, string>();
+    const siblingFiles = tree.filter(
+      (t) =>
+        t.type === 'blob' &&
+        /\.(tsx?|jsx?)$/.test(t.path) &&
+        !/\b(node_modules|\.next|dist|build|out|coverage)\b/.test(t.path) &&
+        !/\.(test|spec|stories)\.(tsx?|jsx?)$/.test(t.path) &&
+        (t.size ?? 0) < 60_000,
+    ).slice(0, 300);
 
     const components: ParsedComponent[] = [];
     const render_configs: Record<string, RenderConfig> = {};
 
     const candidates = tsxFiles.slice(0, 80); // safety cap
+    // Pre-fetch siblings referenced by any candidate so their relatives resolve.
+    // Pass 1: fetch all candidates (sources needed for parsing).
+    const sources = new Map<string, string>();
+    for (let i = 0; i < candidates.length; i++) {
+      const entry = candidates[i];
+      try {
+        const src = await gh.getFile({ owner, name, branch: defaultBranch }, entry.path);
+        sources.set(entry.path, src);
+        relatedFiles.set('/' + entry.path, src);
+      } catch {
+        /* ignore */
+      }
+    }
+
+    // Pass 2: opportunistically fetch non-component siblings referenced by
+    // relative imports in the primary sources. Only pay for files that are
+    // actually needed; cap total extra fetches.
+    const neededSiblings = new Set<string>();
+    for (const [path, src] of sources) {
+      const dir = path.split('/').slice(0, -1).join('/');
+      const re = /(?:from|import)\s*['"](\.[^'"]+)['"]/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(src)) !== null) {
+        const rel = m[1];
+        const joined = joinRel(dir, rel);
+        for (const ext of ['', '.ts', '.tsx', '.js', '.jsx', '/index.ts', '/index.tsx']) {
+          const candidate = joined + ext;
+          if (relatedFiles.has('/' + candidate)) break;
+          const hit = siblingFiles.find((f) => f.path === candidate);
+          if (hit) {
+            neededSiblings.add(hit.path);
+            break;
+          }
+        }
+      }
+    }
+    let extraFetched = 0;
+    for (const p of neededSiblings) {
+      if (extraFetched >= 120) break;
+      if (relatedFiles.has('/' + p)) continue;
+      try {
+        const src = await gh.getFile({ owner, name, branch: defaultBranch }, p);
+        relatedFiles.set('/' + p, src);
+        extraFetched++;
+      } catch { /* ignore */ }
+    }
+
+    // Pass 3: parse each candidate with the enriched relatedFiles map.
     for (let i = 0; i < candidates.length; i++) {
       const entry = candidates[i];
       emit({
@@ -89,13 +170,8 @@ export async function scanRepo(
         total: candidates.length,
         message: `Parsing components… ${i + 1}/${candidates.length}`,
       });
-      let source: string;
-      try {
-        source = await gh.getFile({ owner, name, branch: defaultBranch }, entry.path);
-      } catch {
-        continue;
-      }
-      relatedFiles.set('/' + entry.path, source);
+      const source = sources.get(entry.path);
+      if (!source) continue;
       const parsed = parseComponent({ filePath: entry.path, source, relatedFiles });
       if (!parsed) continue;
       components.push(parsed);
@@ -178,8 +254,26 @@ function buildRenderConfig(parsed: ParsedComponent): RenderConfig {
 
 function looksLikeComponentFile(path: string): boolean {
   const base = path.split('/').pop() ?? '';
-  // Must start uppercase (PascalCase) OR live under a `components` folder.
-  return /^[A-Z]/.test(base.replace(/\.tsx$/, '')) || /\/components\//.test(path);
+  const name = base.replace(/\.tsx$/, '');
+  // Must start uppercase (PascalCase) OR live under a components/ui folder.
+  // Covers shadcn-style lowercase `button.tsx` inside `/ui/`, `/components/`,
+  // or `/registry/**/ui/`.
+  return (
+    /^[A-Z]/.test(name) ||
+    /\/components\//.test(path) ||
+    /\/ui\//.test(path) ||
+    /\/registry\//.test(path)
+  );
+}
+
+function joinRel(dir: string, rel: string): string {
+  const stack = dir ? dir.split('/') : [];
+  for (const seg of rel.split('/')) {
+    if (seg === '.' || seg === '') continue;
+    if (seg === '..') stack.pop();
+    else stack.push(seg);
+  }
+  return stack.filter(Boolean).join('/');
 }
 
 function safeParseJson(s: string): { dependencies?: Record<string, string>; devDependencies?: Record<string, string>; peerDependencies?: Record<string, string> } | null {

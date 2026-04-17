@@ -162,15 +162,67 @@ export function parseComponent({ filePath, source, relatedFiles }: ParseOptions)
   const initial_props = buildInitialProps(props);
   const presets = buildPresets(primary.name, variantForComponent, props);
 
-  // Imports → dependency buckets
+  // Imports → dependency buckets. Relative imports are resolved against the
+  // current file's directory and looked up in the `relatedFiles` virtual FS
+  // (whose keys are absolute, e.g. `/src/components/button.tsx`). We follow
+  // a shallow transitive closure so nested relatives also get inlined.
   const dependencies: Record<string, string> = {};
   const localImports: ParsedComponent['local_imports'] = [];
+  const seenLocal = new Set<string>();
+  const fileDir = ('/' + filePath).split('/').slice(0, -1).join('/');
+
+  function joinRel(dir: string, rel: string): string {
+    const stack = dir ? dir.split('/') : [];
+    for (const seg of rel.split('/')) {
+      if (seg === '.' || seg === '') continue;
+      if (seg === '..') stack.pop();
+      else stack.push(seg);
+    }
+    return '/' + stack.filter(Boolean).join('/');
+  }
+
+  function tryResolve(dir: string, rel: string): { key: string; source: string } | null {
+    if (!relatedFiles) return null;
+    const base = joinRel(dir, rel);
+    const candidates = [
+      base, base + '.ts', base + '.tsx', base + '.js', base + '.jsx',
+      base + '/index.ts', base + '/index.tsx', base + '/index.js', base + '/index.jsx',
+    ];
+    for (const k of candidates) {
+      const s = relatedFiles.get(k);
+      if (s != null) return { key: k, source: s };
+    }
+    return null;
+  }
+
+  const queue: Array<{ fromDir: string; rel: string }> = [];
   for (const [src] of state.imports) {
     if (src.startsWith('.') || src.startsWith('/')) {
-      const resolved = relatedFiles?.get(src) ?? relatedFiles?.get(src + '.tsx') ?? relatedFiles?.get(src + '.ts');
-      if (resolved) localImports.push({ from: src, resolved_path: src, source: resolved });
+      queue.push({ fromDir: fileDir, rel: src });
     } else if (!src.startsWith('react') && src !== 'react-dom') {
       dependencies[src] = 'latest';
+    }
+  }
+
+  while (queue.length) {
+    const { fromDir, rel } = queue.shift()!;
+    const hit = tryResolve(fromDir, rel);
+    if (!hit || seenLocal.has(hit.key)) continue;
+    seenLocal.add(hit.key);
+    localImports.push({ from: rel, resolved_path: hit.key, source: hit.source });
+    // Enqueue nested relative imports from this newly-inlined file.
+    const nextDir = hit.key.split('/').slice(0, -1).join('/');
+    const re = /(?:from|import)\s*['"](\.[^'"]+|\/[^'"]+)['"]/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(hit.source)) !== null) {
+      queue.push({ fromDir: nextDir, rel: m[1] });
+    }
+    // Non-relative bare imports from nested files also add to deps.
+    const bare = /(?:from|import)\s*['"]([^.\/'"][^'"]*)['"]/g;
+    let b: RegExpExecArray | null;
+    while ((b = bare.exec(hit.source)) !== null) {
+      const s = b[1];
+      if (!s.startsWith('react') && s !== 'react-dom') dependencies[s] = 'latest';
     }
   }
 
