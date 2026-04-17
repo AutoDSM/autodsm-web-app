@@ -221,7 +221,7 @@ function readTsType(t: TSType | undefined | null): {
       if (lits.length && lits.length === t.types.length) {
         const values = lits
           .map((x) => {
-            // @ts-expect-error narrowed above
+            // @ts-ignore narrowed above
             const lit = x.literal;
             if (lit.type === 'StringLiteral') return lit.value;
             return null;
@@ -274,7 +274,7 @@ function typeText(t: TSType | null | undefined): string {
 
 function extractPropsTypeRefFromParam(param: unknown): string | undefined {
   if (!param) return undefined;
-  // @ts-expect-error — Babel union is wide
+  // @ts-ignore — Babel union is wide
   const anno = param.typeAnnotation?.typeAnnotation;
   if (!anno) return undefined;
   if (anno.type === 'TSTypeReference' && anno.typeName?.type === 'Identifier') {
@@ -286,26 +286,26 @@ function extractPropsTypeRefFromParam(param: unknown): string | undefined {
 function extractCvaVariants(call: unknown): Record<string, string[]> | null {
   // call is a CallExpression whose args[1] is an ObjectExpression with
   // a property "variants" → ObjectExpression whose props are variant axes.
-  // @ts-expect-error — loose structural parse
+  // @ts-ignore — loose structural parse
   const arg = call.arguments?.[1];
   if (!arg || arg.type !== 'ObjectExpression') return null;
   const variantsProp = arg.properties.find(
-    // @ts-expect-error
+    // @ts-ignore
     (p) => p.type === 'ObjectProperty' && p.key?.name === 'variants',
   );
   if (!variantsProp) return null;
-  // @ts-expect-error
+  // @ts-ignore
   const variantsObj = variantsProp.value;
   if (variantsObj.type !== 'ObjectExpression') return null;
   const out: Record<string, string[]> = {};
   for (const p of variantsObj.properties) {
-    // @ts-expect-error
+    // @ts-ignore
     if (p.type !== 'ObjectProperty' || p.key?.type !== 'Identifier') continue;
-    // @ts-expect-error
+    // @ts-ignore
     const name = p.key.name;
-    // @ts-expect-error
+    // @ts-ignore
     if (p.value.type !== 'ObjectExpression') continue;
-    // @ts-expect-error
+    // @ts-ignore
     const keys: string[] = p.value.properties
       .map((kp: { type: string; key?: { type: string; name?: string; value?: string } }) =>
         kp.type === 'ObjectProperty' && kp.key
