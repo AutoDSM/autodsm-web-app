@@ -1,12 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
 export default function UnsupportedPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen" />}>
+      <UnsupportedInner />
+    </Suspense>
+  );
+}
+
+function UnsupportedInner() {
   const params = useSearchParams();
   const reason = params.get('reason') ?? 'unknown';
   const repo = params.get('repo') ?? '';

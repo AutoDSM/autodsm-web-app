@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 
@@ -12,6 +12,14 @@ interface Progress {
 }
 
 export default function ScanningPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen" />}>
+      <ScanningInner />
+    </Suspense>
+  );
+}
+
+function ScanningInner() {
   const router = useRouter();
   const params = useSearchParams();
   const repo = params.get('repo') ?? '';
