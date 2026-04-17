@@ -275,14 +275,9 @@ export const IFRAME_RUNTIME_SOURCE = /* js */ `
     const specMap = {};
     const add = (s, n) => { if (!specMap[s]) specMap[s] = new Set(); specMap[s].add(n); };
     // Regex captures: lead default, named block, namespace-as, default-only, spec.
-    const re = new RegExp(
-      'import\\s+' +
-      '(?:([A-Za-z_$][\\w$]*)\\s*,\\s*)?' +
-      '(?:\\{([^}]*)\\}|\\*\\s+as\\s+([A-Za-z_$][\\w$]*)|([A-Za-z_$][\\w$]*))?' +
-      '\\s*(?:from\\s*)?' +
-      '[\\'\"]([^\\'\"]+)[\\'\"]',
-      'g'
-    );
+    // Written as regex literal (not string-built RegExp) so backslash
+    // escapes survive the outer template literal.
+    const re = /import\\s+(?:([A-Za-z_$][\\w$]*)\\s*,\\s*)?(?:\\{([^}]*)\\}|\\*\\s+as\\s+([A-Za-z_$][\\w$]*)|([A-Za-z_$][\\w$]*))?\\s*(?:from\\s*)?['"]([^'"]+)['"]/g;
     for (const src of Object.values(files)) {
       if (!src) continue;
       let m;
@@ -300,9 +295,9 @@ export const IFRAME_RUNTIME_SOURCE = /* js */ `
           for (let i = 0; i < parts.length; i++) {
             const token = parts[i].trim();
             if (!token) continue;
-            const asMatch = token.match(/^([A-Za-z_$][\w$]*)\s+as\s+[A-Za-z_$][\w$]*$/);
-            const name = asMatch ? asMatch[1] : token;
-            if (/^[A-Za-z_$][\w$]*$/.test(name)) add(spec, name);
+            const asMatch = token.match(/^([A-Za-z_$][\\w$]*)\\s+as\\s+[A-Za-z_$][\\w$]*$/);
+            const nm = asMatch ? asMatch[1] : token;
+            if (/^[A-Za-z_$][\\w$]*$/.test(nm)) add(spec, nm);
           }
         }
       }
