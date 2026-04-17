@@ -20,8 +20,7 @@ import { parse } from '@babel/parser';
 import _traverse from '@babel/traverse';
 // @babel/traverse ships a broken ESM default export; unwrap it.
 const traverse: typeof _traverse =
-  // @ts-expect-error — dual CJS/ESM
-  (_traverse as { default?: typeof _traverse }).default ?? _traverse;
+  (_traverse as unknown as { default?: typeof _traverse }).default ?? _traverse;
 
 import type {
   ExportDefaultDeclaration,

@@ -1,9 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  experimental: {
-    typedRoutes: false,
-  },
+  typedRoutes: false,
   // The iframe render runtime and esbuild-wasm require special headers for
   // SharedArrayBuffer-backed threads, but we intentionally run esbuild-wasm
   // single-threaded so we can avoid COOP/COEP isolation (which would break
