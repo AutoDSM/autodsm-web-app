@@ -7,6 +7,7 @@ export interface LoadedBrand {
   userId: string | null;
   profile: BrandProfile | null;
   status: "pending" | "scanning" | "completed" | "failed" | "unsupported";
+  unsupportedReason: string | null;
   isPublic: boolean;
 }
 
@@ -20,7 +21,7 @@ export async function loadMyBrand(): Promise<LoadedBrand | null> {
 
   const { data } = await supabase
     .from("brand_repos")
-    .select("owner,name,brand_profile,scan_status,is_public,user_id")
+    .select("owner,name,brand_profile,scan_status,unsupported_reason,is_public,user_id")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -32,7 +33,8 @@ export async function loadMyBrand(): Promise<LoadedBrand | null> {
     repoSlug: `${data.owner}/${data.name}`,
     userId: data.user_id,
     profile: (data.brand_profile as BrandProfile | null) ?? null,
-    status: data.scan_status,
+    status: (data.scan_status as LoadedBrand["status"]) ?? "pending",
+    unsupportedReason: (data.unsupported_reason as string | null) ?? null,
     isPublic: data.is_public,
   };
 }
@@ -45,7 +47,7 @@ export async function loadPublicBrand(
   const supabase = await createClient();
   const { data } = await supabase
     .from("brand_repos")
-    .select("owner,name,brand_profile,scan_status,is_public,user_id")
+    .select("owner,name,brand_profile,scan_status,unsupported_reason,is_public,user_id")
     .eq("owner", owner)
     .eq("name", repo)
     .eq("is_public", true)
@@ -58,7 +60,8 @@ export async function loadPublicBrand(
     repoSlug: `${data.owner}/${data.name}`,
     userId: data.user_id,
     profile: (data.brand_profile as BrandProfile | null) ?? null,
-    status: data.scan_status,
+    status: (data.scan_status as LoadedBrand["status"]) ?? "pending",
+    unsupportedReason: (data.unsupported_reason as string | null) ?? null,
     isPublic: data.is_public,
   };
 }

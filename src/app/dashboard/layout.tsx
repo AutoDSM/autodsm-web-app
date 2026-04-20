@@ -20,6 +20,12 @@ export default async function DashboardLayout({
   const brand = await loadMyBrand();
   if (!brand) redirect("/onboarding");
 
+  if (brand.status === "unsupported") {
+    redirect(
+      `/onboarding/unsupported?repo=${encodeURIComponent(brand.repoSlug)}&reason=${encodeURIComponent(brand.unsupportedReason ?? "")}`,
+    );
+  }
+
   const userLabel =
     (user.user_metadata?.user_name as string | undefined) ??
     (user.user_metadata?.full_name as string | undefined) ??

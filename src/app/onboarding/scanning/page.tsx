@@ -50,6 +50,7 @@ function ScanningPageInner() {
         }
         const body = await res.json();
         if (body.status === "completed") {
+          await router.refresh();
           router.replace("/dashboard");
         } else if (body.unsupported) {
           router.replace(
