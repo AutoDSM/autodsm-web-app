@@ -1,17 +1,15 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
+import { ProductIcon } from "@/components/brand/product-mark";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
 function UnsupportedPageInner() {
   const params = useSearchParams();
-  const { resolvedTheme } = useTheme();
   const repo = params.get("repo");
   const reason = params.get("reason");
   const [email, setEmail] = React.useState("");
@@ -37,15 +35,10 @@ function UnsupportedPageInner() {
     setSubmitted(true);
   }
 
-  const iconSrc =
-    resolvedTheme === "light"
-      ? "/brand/autodsm-icon-light.svg"
-      : "/brand/autodsm-icon-dark.svg";
-
   return (
     <div className="min-h-screen grid place-items-center bg-[var(--bg-primary)] px-6">
       <div className="w-full max-w-[460px] rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-10">
-        <Image src={iconSrc} alt="" width={28} height={28} aria-hidden />
+        <ProductIcon size={28} />
         <h2 className="mt-6 text-h2 text-[var(--text-primary)]">
           autoDSM currently supports React + TypeScript.
         </h2>

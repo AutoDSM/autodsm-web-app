@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { ProductWordmark } from "@/components/brand/product-mark";
 import {
   LayoutDashboard,
   Palette,
@@ -89,26 +89,8 @@ export function Sidebar({ userLabel }: { userLabel?: string }) {
   return (
     <aside className="w-[240px] shrink-0 h-screen sticky top-0 flex flex-col bg-[var(--bg-primary)] px-3 py-4">
       <div className="flex items-center justify-between px-2 pb-4">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <Image
-            src="/brand/autodsm-icon-dark.svg"
-            alt=""
-            width={22}
-            height={22}
-            className="dark:block hidden"
-            aria-hidden
-          />
-          <Image
-            src="/brand/autodsm-icon-light.svg"
-            alt=""
-            width={22}
-            height={22}
-            className="dark:hidden block"
-            aria-hidden
-          />
-          <span className="font-[var(--font-manrope)] font-semibold text-[14px] text-[var(--text-primary)]">
-            autoDSM
-          </span>
+        <Link href="/dashboard" className="flex items-center min-w-0">
+          <ProductWordmark width={100} height={36} />
         </Link>
         <button
           aria-label="Toggle sidebar"

@@ -2,9 +2,8 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
-import { useTheme } from "next-themes";
 import { createClient } from "@/lib/supabase/client";
+import { ProductIcon } from "@/components/brand/product-mark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { normalizeRepoInput } from "@/lib/utils";
@@ -13,7 +12,6 @@ import { ArrowRight, Github } from "lucide-react";
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { resolvedTheme } = useTheme();
   const [value, setValue] = React.useState("");
   const [provider, setProvider] = React.useState<"github" | "google" | null>(null);
 
@@ -37,15 +35,10 @@ export default function OnboardingPage() {
     router.push(`/onboarding/scanning?repo=${encodeURIComponent(normalized)}`);
   }
 
-  const iconSrc =
-    resolvedTheme === "light"
-      ? "/brand/autodsm-icon-light.svg"
-      : "/brand/autodsm-icon-dark.svg";
-
   return (
     <div className="min-h-screen grid place-items-center bg-[var(--bg-primary)] px-6">
       <div className="w-full max-w-[460px] rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-10">
-        <Image src={iconSrc} alt="" width={28} height={28} aria-hidden priority />
+        <ProductIcon size={28} priority />
         <h2 className="mt-6 text-h2 text-[var(--text-primary)]">Connect a repository</h2>
         <p className="mt-2 text-body-s text-[var(--text-secondary)]">
           Paste a GitHub URL or <code className="text-mono text-[12px] text-[var(--text-primary)]">owner/repo</code>.

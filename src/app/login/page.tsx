@@ -1,14 +1,12 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
-import { useTheme } from "next-themes";
 import { createClient } from "@/lib/supabase/client";
+import { ProductIcon } from "@/components/brand/product-mark";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 export default function LoginPage() {
-  const { resolvedTheme } = useTheme();
   const [loading, setLoading] = React.useState<"github" | "google" | null>(null);
   const [errorFromQuery, setErrorFromQuery] = React.useState<string | null>(null);
 
@@ -40,22 +38,10 @@ export default function LoginPage() {
     }
   }
 
-  const iconSrc =
-    resolvedTheme === "light"
-      ? "/brand/autodsm-icon-light.svg"
-      : "/brand/autodsm-icon-dark.svg";
-
   return (
     <div className="min-h-screen grid place-items-center bg-[var(--bg-primary)] px-6">
       <div className="w-full max-w-[420px] rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-10">
-        <Image
-          src={iconSrc}
-          alt=""
-          width={32}
-          height={32}
-          aria-hidden
-          priority
-        />
+        <ProductIcon size={36} priority />
         <h2 className="mt-6 text-h2 text-[var(--text-primary)]">Sign in to autoDSM</h2>
         <p className="mt-2 text-body-s text-[var(--text-secondary)]">
           Connect your design system in under a minute.

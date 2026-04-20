@@ -144,11 +144,12 @@ Two branded animations:
 
 ## Logo
 
-Four files in `public/brand/`:
+Primary product marks (Perplexity Computer) in `public/brand/`:
 
-- `autodsm-wordmark-light.svg` — wordmark for dark backgrounds.
-- `autodsm-wordmark-dark.svg`  — wordmark for light backgrounds.
-- `autodsm-icon-light.svg`     — icon for dark backgrounds.
-- `autodsm-icon-dark.svg`      — icon for light backgrounds.
+- `perplexity-wordmark-light.svg` — full wordmark for **light** UI (dark ink on light background).
+- `perplexity-wordmark-dark.svg` — full wordmark for **dark** UI (light ink on dark background).
+- `perplexity-icon.svg` — mark-only icon (use where a compact glyph is needed).
 
-Do not recolor. Do not stretch. Clearspace = height of the `a`.
+Use `ProductWordmark` / `ProductIcon` from [`src/components/brand/product-mark.tsx`](../src/components/brand/product-mark.tsx) so light/dark tracks `next-themes` (`class` dark mode). Do not recolor. Preserve aspect ratio; wordmarks are wide relative to height.
+
+Legacy `autodsm-*.svg` files may remain in the folder for reference but are not used.

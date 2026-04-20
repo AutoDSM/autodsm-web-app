@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import Image from "next/image";
+import { ProductIcon } from "@/components/brand/product-mark";
 
 /**
  * Client-side hop after OAuth. Reads sessionStorage pending repo and routes:
@@ -60,22 +60,7 @@ export default function AuthBridge() {
   return (
     <div className="min-h-screen grid place-items-center bg-[var(--bg-primary)]">
       <div className="flex flex-col items-center gap-3">
-        <Image
-          src="/brand/autodsm-icon-dark.svg"
-          alt=""
-          width={32}
-          height={32}
-          className="autodsm-pulse dark:block hidden"
-          aria-hidden
-        />
-        <Image
-          src="/brand/autodsm-icon-light.svg"
-          alt=""
-          width={32}
-          height={32}
-          className="autodsm-pulse dark:hidden block"
-          aria-hidden
-        />
+        <ProductIcon size={32} className="autodsm-pulse" />
         <p className="text-body-s text-[var(--text-secondary)]">Signing you in…</p>
       </div>
     </div>

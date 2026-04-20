@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description:
     "Connect a GitHub repository and get a premium, shareable brand book for every color, font, spacing value, shadow, border, animation, breakpoint, and asset.",
   icons: {
-    icon: "/brand/autodsm-icon-dark.svg",
+    icon: "/brand/perplexity-icon.svg",
   },
   openGraph: {
     title: "autoDSM",

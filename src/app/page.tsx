@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
@@ -27,6 +26,7 @@ import {
 } from "lucide-react";
 import { normalizeRepoInput } from "@/lib/utils";
 import { toast } from "sonner";
+import { ProductWordmark } from "@/components/brand/product-mark";
 
 /**
  * Landing page — deep product explainer for the Brand Book MVP.
@@ -92,7 +92,7 @@ function TopNav() {
     <header className="sticky top-0 z-40 h-[72px] px-6 sm:px-8 bg-[var(--bg-primary)]/80 backdrop-blur-lg border-b border-[var(--border-subtle)]">
       <div className="max-w-[1200px] mx-auto h-full flex items-center justify-between gap-6">
         <Link href="/" className="flex items-center gap-2 shrink-0">
-          <Wordmark />
+          <ProductWordmark width={120} height={43} priority />
         </Link>
 
         <nav className="hidden md:flex items-center gap-1 bg-[var(--bg-secondary)] rounded-full p-1 border border-[var(--border-subtle)]">
@@ -127,31 +127,6 @@ function TopNav() {
         </div>
       </div>
     </header>
-  );
-}
-
-function Wordmark() {
-  // Serves correct asset for light/dark. We avoid hydration mismatch by
-  // showing both and hiding the wrong one via CSS dark/light class.
-  return (
-    <span className="inline-flex items-center">
-      <Image
-        src="/brand/autodsm-wordmark-light.svg"
-        alt="autoDSM"
-        width={132}
-        height={24}
-        priority
-        className="block dark:hidden"
-      />
-      <Image
-        src="/brand/autodsm-wordmark-dark.svg"
-        alt="autoDSM"
-        width={132}
-        height={24}
-        priority
-        className="hidden dark:block"
-      />
-    </span>
   );
 }
 
@@ -992,7 +967,7 @@ function Footer() {
     <footer className="border-t border-[var(--border-subtle)] py-10">
       <div className="max-w-[1200px] mx-auto px-6 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-3">
-          <Wordmark />
+          <ProductWordmark width={120} height={43} />
           <span
             className="text-[12px] text-[var(--text-tertiary)]"
             style={{ fontFamily: "var(--font-geist-sans)" }}

@@ -3,8 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { ProductWordmark } from "@/components/brand/product-mark";
 
 const CATEGORIES: { slug: string; label: string }[] = [
   { slug: "", label: "Overview" },
@@ -38,26 +38,9 @@ export function PublicTopNav({
         {/* Left: wordmark */}
         <Link
           href="/"
-          className="flex items-center gap-2 shrink-0 text-[var(--text-primary)]"
+          className="flex items-center gap-2 shrink-0 text-[var(--text-primary)] min-w-0"
         >
-          <Image
-            src="/brand/autodsm-icon-dark.svg"
-            alt="autoDSM"
-            width={24}
-            height={24}
-            priority
-          />
-          <span
-            className="text-[var(--text-primary)]"
-            style={{
-              fontFamily: "var(--font-manrope)",
-              fontWeight: 700,
-              fontSize: 16,
-              letterSpacing: "-0.01em",
-            }}
-          >
-            autoDSM
-          </span>
+          <ProductWordmark width={110} height={40} priority />
         </Link>
 
         {/* Center: repo name */}
