@@ -33,8 +33,8 @@ function AssetPreview({ asset }: { asset: BrandAsset }) {
     );
   }
   if (asset.storageUrl) {
-    // eslint-disable-next-line @next/next/no-img-element
     return (
+      // eslint-disable-next-line @next/next/no-img-element -- dynamic external URLs (Supabase)
       <img
         src={asset.storageUrl}
         alt={asset.name}

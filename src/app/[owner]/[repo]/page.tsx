@@ -15,6 +15,10 @@ export default function PublicOverviewPage() {
   const profile = useBrandStore((s) => s.profile);
   const repoSlug = useBrandStore((s) => s.repoSlug);
 
+  const slugForLinks =
+    repoSlug ?? (profile ? `${profile.repo.owner}/${profile.repo.name}` : null);
+  const base = slugForLinks ? `/${slugForLinks}` : "";
+
   if (!profile) {
     return (
       <EmptyState
@@ -24,7 +28,6 @@ export default function PublicOverviewPage() {
     );
   }
 
-  const base = repoSlug ? `/${repoSlug}` : "";
   const scannedAt = new Date(profile.scannedAt).toLocaleDateString(undefined, {
     month: "long",
     day: "numeric",
@@ -84,11 +87,11 @@ export default function PublicOverviewPage() {
           BRAND BOOK · SCANNED {scannedAt.toUpperCase()}
         </div>
         <h1
-          className="text-[var(--text-primary)]"
+          className="text-[var(--text-primary)] break-words"
           style={{
             fontFamily: "var(--font-manrope)",
             fontWeight: 700,
-            fontSize: 56,
+            fontSize: "clamp(2rem, 1.15rem + 5.25vw, 3.5rem)",
             lineHeight: 1.05,
             letterSpacing: "-0.03em",
           }}
@@ -98,10 +101,10 @@ export default function PublicOverviewPage() {
           {profile.repo.name}
         </h1>
         <p
-          className="mt-5 text-[var(--text-secondary)] max-w-[640px]"
+          className="mt-5 text-[var(--text-secondary)] max-w-[640px] text-pretty"
           style={{
             fontFamily: "var(--font-geist-sans)",
-            fontSize: 16,
+            fontSize: "clamp(0.9375rem, 0.88rem + 0.28vw, 1rem)",
             lineHeight: 1.55,
           }}
         >
@@ -132,7 +135,7 @@ export default function PublicOverviewPage() {
               style={{
                 fontFamily: "var(--font-manrope)",
                 fontWeight: 600,
-                fontSize: 28,
+                fontSize: "clamp(1.375rem, 1.05rem + 1.75vw, 1.75rem)",
                 letterSpacing: "-0.02em",
               }}
             >
@@ -142,7 +145,7 @@ export default function PublicOverviewPage() {
               className="mt-1 text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)] transition-colors duration-150"
               style={{
                 fontFamily: "var(--font-geist-sans)",
-                fontSize: 12,
+                fontSize: "clamp(0.6875rem, 0.65rem + 0.2vw, 0.75rem)",
                 fontWeight: 500,
               }}
             >
@@ -161,7 +164,7 @@ export default function PublicOverviewPage() {
               style={{
                 fontFamily: "var(--font-manrope)",
                 fontWeight: 600,
-                fontSize: 22,
+                fontSize: "clamp(1.125rem, 0.95rem + 1vw, 1.375rem)",
                 letterSpacing: "-0.02em",
               }}
             >
@@ -200,7 +203,7 @@ export default function PublicOverviewPage() {
               style={{
                 fontFamily: "var(--font-manrope)",
                 fontWeight: 600,
-                fontSize: 22,
+                fontSize: "clamp(1.125rem, 0.95rem + 1vw, 1.375rem)",
                 letterSpacing: "-0.02em",
               }}
             >
@@ -217,7 +220,7 @@ export default function PublicOverviewPage() {
               Type ladder →
             </Link>
           </div>
-          <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-8 space-y-3">
+          <div className="space-y-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4 sm:p-8">
             {topType.map((t) => (
               <div
                 key={t.name}
@@ -246,7 +249,7 @@ export default function PublicOverviewPage() {
               style={{
                 fontFamily: "var(--font-manrope)",
                 fontWeight: 600,
-                fontSize: 22,
+                fontSize: "clamp(1.125rem, 0.95rem + 1vw, 1.375rem)",
                 letterSpacing: "-0.02em",
               }}
             >

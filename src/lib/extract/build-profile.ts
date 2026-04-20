@@ -30,7 +30,6 @@ import {
   toOklchString,
   contrastRatio,
   classifyGroup,
-  parseSafe,
 } from "./color-utils";
 
 import {
@@ -234,7 +233,7 @@ function buildColorToken(
 
   const darkHex = darkValue ? (toHex(darkValue, varMap) ?? undefined) : undefined;
 
-  const group: ColorGroup = classifyGroup(name, value);
+  const group: ColorGroup = classifyGroup(name);
 
   return {
     name,
@@ -663,7 +662,7 @@ export async function buildBrandProfile(
 
   if (shadcnJson) {
     try {
-      const shadcn = parseShadcnConfig(shadcnJson, shadcnConfigPath ?? "components.json");
+      const shadcn = parseShadcnConfig(shadcnJson);
       resolvedShadcnPath = shadcnConfigPath ?? "components.json";
       detectedShadcnCssPath = shadcn.cssPath;
     } catch {

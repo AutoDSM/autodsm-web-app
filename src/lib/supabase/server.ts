@@ -1,4 +1,5 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createClient as createSupabaseJsClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { getSupabaseUrl, requireSupabasePublicConfig } from "./env";
 
@@ -32,12 +33,11 @@ export async function createClient() {
 
 export function createServiceClient() {
   // Service role client — bypasses RLS. Only use on the server.
-  const { createClient } = require("@supabase/supabase-js");
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!key) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set");
   const url = getSupabaseUrl();
   if (!url) throw new Error("NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL is required for service client");
-  return createClient(url, key, {
+  return createSupabaseJsClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }

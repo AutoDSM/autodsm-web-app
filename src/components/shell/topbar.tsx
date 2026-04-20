@@ -2,50 +2,46 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
-import { ChevronRight, Github } from "lucide-react";
+import { Github } from "lucide-react";
 import Link from "next/link";
 import { ThemeToggle } from "./theme-toggle";
 import { useBrandStore } from "@/stores/brand";
 import { CATEGORY_LABELS } from "@/lib/brand/types";
 
-function titleFromPath(pathname: string, repoSlug: string | null): {
-  repo: string;
-  section: string | null;
-} {
+/** Current dashboard tab title only (no repo slug in the chrome). */
+function sectionTitleFromPath(pathname: string): string {
   const segments = pathname.split("/").filter(Boolean);
-  // /dashboard, /dashboard/colors, /dashboard/settings
   const lastSeg = segments[segments.length - 1] ?? "";
-  const section =
-    segments[0] === "dashboard" && segments.length > 1
-      ? CATEGORY_LABELS[lastSeg] ?? (lastSeg === "settings" ? "Settings" : null)
-      : null;
-  return { repo: repoSlug ?? "—", section };
+
+  if (segments[0] !== "dashboard") {
+    return "Dashboard";
+  }
+  if (segments.length === 1) {
+    return "Dashboard";
+  }
+  if (segments[1] === "agent") {
+    return "New agent";
+  }
+  if (lastSeg === "settings") {
+    return "Settings";
+  }
+  return CATEGORY_LABELS[lastSeg] ?? lastSeg;
 }
 
 export function TopBar() {
   const pathname = usePathname();
-  const { repoSlug, profile } = useBrandStore();
-  const { repo, section } = titleFromPath(pathname, repoSlug);
+  const profile = useBrandStore((s) => s.profile);
+  const title = sectionTitleFromPath(pathname);
+
+  /** Agent uses a minimal hero + composer; repo title row would duplicate the shell chrome. */
+  if (pathname === "/dashboard/agent") {
+    return null;
+  }
 
   return (
-    <div className="flex items-center justify-between h-14 px-6 border-b border-[var(--border-subtle)]">
-      <div className="flex items-center gap-2 min-w-0">
-        <span className="text-body-s text-[var(--text-secondary)] truncate">
-          {repo}
-        </span>
-        {section ? (
-          <>
-            <ChevronRight size={14} strokeWidth={1.5} className="text-[var(--text-tertiary)]" />
-            <span className="text-body-s text-[var(--text-primary)] font-medium">
-              {section}
-            </span>
-          </>
-        ) : (
-          <>
-            <ChevronRight size={14} strokeWidth={1.5} className="text-[var(--text-tertiary)]" />
-            <span className="text-body-s text-[var(--text-primary)] font-medium">Overview</span>
-          </>
-        )}
+    <div className="flex items-center justify-between h-14 px-6 border-b border-[var(--border-subtle)] shrink-0">
+      <div className="flex min-w-0 items-center">
+        <span className="truncate text-body-s font-medium text-[var(--text-primary)]">{title}</span>
       </div>
       <div className="flex items-center gap-1">
         {profile?.repo?.url ? (

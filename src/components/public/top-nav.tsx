@@ -40,7 +40,7 @@ export function PublicTopNav({
           href="/"
           className="flex items-center gap-2 shrink-0 text-[var(--text-primary)] min-w-0"
         >
-          <ProductWordmark width={110} height={40} priority />
+          <ProductWordmark width={110} priority />
         </Link>
 
         {/* Center: repo name */}

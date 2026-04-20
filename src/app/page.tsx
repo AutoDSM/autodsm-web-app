@@ -92,7 +92,7 @@ function TopNav() {
     <header className="sticky top-0 z-40 h-[72px] px-6 sm:px-8 bg-[var(--bg-primary)]/80 backdrop-blur-lg border-b border-[var(--border-subtle)]">
       <div className="max-w-[1200px] mx-auto h-full flex items-center justify-between gap-6">
         <Link href="/" className="flex items-center gap-2 shrink-0">
-          <ProductWordmark width={120} height={43} priority />
+          <ProductWordmark width={120} priority />
         </Link>
 
         <nav className="hidden md:flex items-center gap-1 bg-[var(--bg-secondary)] rounded-full p-1 border border-[var(--border-subtle)]">
@@ -199,11 +199,11 @@ function Hero({
         </h1>
 
         <p
-          className="mt-5 max-w-[640px] text-[var(--text-secondary)]"
+          className="mt-5 max-w-[640px] text-pretty text-[var(--text-secondary)]"
           style={{
             fontFamily: "var(--font-geist-sans)",
             fontWeight: 400,
-            fontSize: "17px",
+            fontSize: "clamp(0.9375rem, 0.86rem + 0.45vw, 1.0625rem)",
             lineHeight: 1.55,
           }}
         >
@@ -215,26 +215,28 @@ function Hero({
 
         <form
           onSubmit={onSubmit}
-          className="mt-10 flex items-center gap-1 h-14 w-full max-w-[520px] bg-[var(--bg-elevated)] rounded-full border border-[var(--border-default)] pl-5 pr-1.5 shadow-[var(--shadow-md)]"
+          className="mt-10 flex h-auto w-full max-w-[520px] flex-col gap-2 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-2 shadow-[var(--shadow-md)] sm:h-14 sm:flex-row sm:items-center sm:gap-1 sm:rounded-full sm:p-0 sm:pl-5 sm:pr-1.5"
         >
-          <Github
-            size={16}
-            strokeWidth={1.5}
-            className="text-[var(--text-tertiary)] shrink-0"
-          />
-          <input
-            type="text"
-            placeholder="owner/repo or github.com URL"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            spellCheck={false}
-            aria-label="GitHub repository"
-            className="flex-1 h-full bg-transparent outline-none text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] ml-3"
-            style={{ fontFamily: "var(--font-geist-sans)" }}
-          />
+          <div className="flex min-h-11 flex-1 items-center gap-0 pl-1 sm:min-h-0 sm:pl-0">
+            <Github
+              size={16}
+              strokeWidth={1.5}
+              className="text-[var(--text-tertiary)] shrink-0"
+            />
+            <input
+              type="text"
+              placeholder="owner/repo or github.com URL"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              spellCheck={false}
+              aria-label="GitHub repository"
+              className="min-w-0 flex-1 bg-transparent py-2 text-[15px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-placeholder)] sm:h-full sm:py-0 ml-2 sm:ml-3"
+              style={{ fontFamily: "var(--font-geist-sans)" }}
+            />
+          </div>
           <button
             type="submit"
-            className="h-11 px-5 inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-fg)] text-[14px] transition-colors duration-150"
+            className="inline-flex h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-full bg-[var(--accent)] px-5 text-[14px] text-[var(--accent-fg)] transition-colors duration-150 hover:bg-[var(--accent-hover)] sm:w-auto"
             style={{ fontFamily: "var(--font-geist-sans)", fontWeight: 500 }}
           >
             Get started
@@ -340,7 +342,7 @@ function HowItWorks() {
           {steps.map((s) => (
             <div
               key={s.n}
-              className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-8"
+              className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-5 sm:p-8"
             >
               <div
                 className="text-[var(--accent)]"
@@ -353,21 +355,21 @@ function HowItWorks() {
                 {s.n}
               </div>
               <h3
-                className="mt-4 text-[var(--text-primary)]"
+                className="mt-4 text-[var(--text-primary)] text-pretty"
                 style={{
                   fontFamily: "var(--font-manrope)",
                   fontWeight: 600,
-                  fontSize: 22,
+                  fontSize: "clamp(1.125rem, 0.95rem + 1vw, 1.375rem)",
                   letterSpacing: "-0.015em",
                 }}
               >
                 {s.title}
               </h3>
               <p
-                className="mt-3 text-[var(--text-secondary)]"
+                className="mt-3 text-pretty text-[var(--text-secondary)]"
                 style={{
                   fontFamily: "var(--font-geist-sans)",
-                  fontSize: 14.5,
+                  fontSize: "clamp(0.875rem, 0.82rem + 0.22vw, 0.90625rem)",
                   lineHeight: 1.6,
                 }}
               >
@@ -470,7 +472,7 @@ function WhatsExtracted() {
       className="scroll-mt-24 py-24 sm:py-32 bg-[var(--bg-secondary)] border-y border-[var(--border-subtle)]"
     >
       <div className="max-w-[1200px] mx-auto px-6 sm:px-8">
-        <SectionLabel>What's inside</SectionLabel>
+        <SectionLabel>What&apos;s inside</SectionLabel>
         <SectionTitle>
           Twelve token categories, auto-extracted and rendered.
         </SectionTitle>
@@ -544,10 +546,10 @@ function BrandBookSection() {
             Share a link. Everyone gets the same source of truth.
           </SectionTitle>
           <p
-            className="mt-5 text-[var(--text-secondary)] max-w-[520px]"
+            className="mt-5 max-w-[520px] text-pretty text-[var(--text-secondary)]"
             style={{
               fontFamily: "var(--font-geist-sans)",
-              fontSize: 16,
+              fontSize: "clamp(0.9375rem, 0.88rem + 0.28vw, 1rem)",
               lineHeight: 1.6,
             }}
           >
@@ -633,11 +635,11 @@ function BrandBookSection() {
               Brand book
             </div>
             <div
-              className="mt-2 text-[var(--text-primary)]"
+              className="mt-2 text-[var(--text-primary)] break-words"
               style={{
                 fontFamily: "var(--font-manrope)",
                 fontWeight: 700,
-                fontSize: 32,
+                fontSize: "clamp(1.5rem, 1.05rem + 2.25vw, 2rem)",
                 letterSpacing: "-0.025em",
                 lineHeight: 1.05,
               }}
@@ -821,7 +823,7 @@ function MvpScope() {
         </SectionTitle>
         <SectionSubtitle>
           The V1 scope is intentionally narrow. Everything you see is
-          shippable today. Here's what's in and what's next.
+          shippable today. Here&apos;s what&apos;s in and what&apos;s next.
         </SectionSubtitle>
 
         <div className="mt-14 grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -927,10 +929,10 @@ function FinalCta() {
           Ready to see your design system?
         </h2>
         <p
-          className="mt-5 text-[var(--text-secondary)]"
+          className="mt-5 text-pretty text-[var(--text-secondary)]"
           style={{
             fontFamily: "var(--font-geist-sans)",
-            fontSize: 17,
+            fontSize: "clamp(0.9375rem, 0.86rem + 0.45vw, 1.0625rem)",
             lineHeight: 1.55,
           }}
         >
@@ -967,7 +969,7 @@ function Footer() {
     <footer className="border-t border-[var(--border-subtle)] py-10">
       <div className="max-w-[1200px] mx-auto px-6 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-3">
-          <ProductWordmark width={120} height={43} />
+          <ProductWordmark width={120} />
           <span
             className="text-[12px] text-[var(--text-tertiary)]"
             style={{ fontFamily: "var(--font-geist-sans)" }}
@@ -988,7 +990,7 @@ function Footer() {
             className="text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors duration-150"
             style={{ fontFamily: "var(--font-geist-sans)" }}
           >
-            What's inside
+            What&apos;s inside
           </a>
           <Link
             href="/login"
@@ -1038,10 +1040,10 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 function SectionSubtitle({ children }: { children: React.ReactNode }) {
   return (
     <p
-      className="mt-4 text-[var(--text-secondary)] max-w-[620px]"
+      className="mt-4 max-w-[620px] text-pretty text-[var(--text-secondary)]"
       style={{
         fontFamily: "var(--font-geist-sans)",
-        fontSize: 16,
+        fontSize: "clamp(0.9375rem, 0.88rem + 0.28vw, 1rem)",
         lineHeight: 1.6,
       }}
     >

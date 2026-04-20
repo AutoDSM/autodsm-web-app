@@ -144,12 +144,15 @@ Two branded animations:
 
 ## Logo
 
-Primary product marks (Perplexity Computer) in `public/brand/`:
+**Wordmark (Perplexity Computer)** in `public/brand/`:
 
-- `perplexity-wordmark-light.svg` — full wordmark for **light** UI (dark ink on light background).
-- `perplexity-wordmark-dark.svg` — full wordmark for **dark** UI (light ink on dark background).
-- `perplexity-icon.svg` — mark-only icon (use where a compact glyph is needed).
+- `perplexity-wordmark-light.svg` — light UI (from `Logo-Light-Text.svg`).
+- `perplexity-wordmark-dark.svg` — dark UI (from `Logo-Dark-Text.svg.svg` on disk).
 
-Use `ProductWordmark` / `ProductIcon` from [`src/components/brand/product-mark.tsx`](../src/components/brand/product-mark.tsx) so light/dark tracks `next-themes` (`class` dark mode). Do not recolor. Preserve aspect ratio; wordmarks are wide relative to height.
+**Mark (autoDSM hex)** — compact glyph:
 
-Legacy `autodsm-*.svg` files may remain in the folder for reference but are not used.
+- `autodsm-icon-light.svg` / `autodsm-icon-dark.svg`
+
+Use `ProductWordmark` / `ProductIcon` from [`src/components/brand/product-mark.tsx`](../src/components/brand/product-mark.tsx) so light/dark tracks `next-themes` (`class` on `html`). Do not recolor. `ProductWordmark` keeps the natural **921×329** aspect ratio from width alone.
+
+Legacy `autodsm-wordmark-*.svg` files may remain in the folder but are not used by `ProductWordmark`.

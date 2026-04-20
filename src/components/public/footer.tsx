@@ -13,7 +13,7 @@ export function PublicFooter() {
           aria-label="Perplexity Computer — home"
           className="inline-flex items-center text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors duration-150 [transition-timing-function:var(--ease-standard)]"
         >
-          <ProductWordmark width={100} height={36} />
+          <ProductWordmark width={100} />
         </Link>
 
         <Link

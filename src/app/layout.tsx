@@ -1,15 +1,20 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "sonner";
 import { fontVariables } from "@/styles/fonts";
 import "./globals.css";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   title: "autoDSM — The design system manager built for the AI era",
   description:
     "Connect a GitHub repository and get a premium, shareable brand book for every color, font, spacing value, shadow, border, animation, breakpoint, and asset.",
   icons: {
-    icon: "/brand/perplexity-icon.svg",
+    icon: [{ url: "/brand/favicon.svg", type: "image/svg+xml" }],
   },
   openGraph: {
     title: "autoDSM",

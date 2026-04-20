@@ -1,12 +1,13 @@
 "use client";
 
-import * as React from "react";
 import { useBrandStore } from "@/stores/brand";
 import type { BrandProfile } from "@/lib/brand/types";
 
 /**
- * Hydrates the client-side brand store with a server-fetched BrandProfile.
- * Place this near the top of a server layout and pass the profile in.
+ * Hydrates the client-side brand store with server-fetched props.
+ * Sync runs during render (not only in an effect) so SSR and the first client
+ * paint see the same profile/repoSlug — otherwise links like `/colors` could
+ * render until hydration and cause real 404s on the public brand book.
  */
 export function BrandProvider({
   profile,
@@ -17,9 +18,13 @@ export function BrandProvider({
   repoSlug: string | null;
   children: React.ReactNode;
 }) {
-  const setProfile = useBrandStore((s) => s.setProfile);
-  React.useEffect(() => {
-    setProfile(profile, repoSlug);
-  }, [profile, repoSlug, setProfile]);
+  const resolvedRepoSlug =
+    repoSlug ?? (profile ? `${profile.repo.owner}/${profile.repo.name}` : null);
+
+  useBrandStore.setState({
+    profile,
+    repoSlug: resolvedRepoSlug,
+  });
+
   return <>{children}</>;
 }

@@ -18,7 +18,7 @@ export default function DashboardOverviewPage() {
 
   if (!profile) {
     return (
-      <div className="px-10 py-10">
+      <div className="px-6 py-8 sm:px-10 sm:py-10">
         <EmptyState
           icon={<Sparkles size={24} strokeWidth={1.5} />}
           title="No brand profile loaded yet"
@@ -55,7 +55,7 @@ export default function DashboardOverviewPage() {
     : profile.meta.tailwindConfigPath ?? "repository";
 
   return (
-    <div className="px-10 py-10 max-w-[1280px]">
+    <div className="w-full min-w-0 max-w-[1280px] px-6 py-8 sm:px-10 sm:py-10">
       {/* Heading */}
       <h1 className="text-h1 text-[var(--text-primary)]">Your brand</h1>
       <p className="mt-2 text-[15px] text-[var(--text-secondary)]">
@@ -99,7 +99,7 @@ export default function DashboardOverviewPage() {
         {topPalette.length === 0 ? (
           <EmptyStrip>No colors detected yet.</EmptyStrip>
         ) : (
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex flex-wrap gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-canvas)] p-5">
             {topPalette.map((c) => (
               <Link
                 key={c.cssVariable || c.value + c.name}
@@ -286,12 +286,14 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="mt-12">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-h3 text-[var(--text-primary)]">{title}</h2>
+    <section className="mt-10 sm:mt-12">
+      <div className="mb-4 flex items-end justify-between gap-4 border-b border-[var(--border-subtle)] pb-3">
+        <h2 className="text-[15px] font-semibold leading-snug tracking-tight text-[var(--text-primary)] sm:text-[16px]">
+          {title}
+        </h2>
         <Link
           href={href}
-          className="text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors duration-150"
+          className="shrink-0 text-[12px] font-medium text-[var(--accent)] transition-opacity duration-150 hover:opacity-90 [transition-timing-function:var(--ease-standard)]"
         >
           View all →
         </Link>

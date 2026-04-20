@@ -228,12 +228,11 @@ export type BrandCategory = (typeof BRAND_CATEGORIES)[number];
 /** Sidebar section groupings (PDF §7). */
 export const SIDEBAR_SECTIONS = [
   {
-    label: "IDENTITY",
-    items: ["colors", "typography", "assets"] as const,
-  },
-  {
-    label: "STYLE",
+    label: "DESIGN TOKENS",
     items: [
+      "colors",
+      "typography",
+      "assets",
       "spacing",
       "shadows",
       "radii",

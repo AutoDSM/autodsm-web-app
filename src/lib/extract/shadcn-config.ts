@@ -27,10 +27,7 @@ export interface ShadcnConfigResult {
  * Parse a components.json string and extract the CSS path and metadata.
  * Permissive — returns nulls on failure.
  */
-export function parseShadcnConfig(
-  jsonSource: string,
-  shadcnConfigPath: string = "components.json"
-): ShadcnConfigResult {
+export function parseShadcnConfig(jsonSource: string): ShadcnConfigResult {
   const result: ShadcnConfigResult = {
     cssPath: null,
     tailwindConfigPath: null,
@@ -56,9 +53,9 @@ export function parseShadcnConfig(
   // or at root: { "globalCss": "app/globals.css" }
   const tw = parsed.tailwind as Record<string, unknown> | undefined;
   if (tw && typeof tw.css === "string") {
-    result.cssPath = normalizePath(tw.css, shadcnConfigPath);
+    result.cssPath = normalizePath(tw.css);
   } else if (typeof parsed.globalCss === "string") {
-    result.cssPath = normalizePath(parsed.globalCss as string, shadcnConfigPath);
+    result.cssPath = normalizePath(parsed.globalCss as string);
   }
 
   // Tailwind config path
@@ -71,10 +68,7 @@ export function parseShadcnConfig(
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function normalizePath(
-  cssPath: string,
-  _configPath: string
-): string {
+function normalizePath(cssPath: string): string {
   // Normalise leading "./" and ensure it starts from project root
   return cssPath.replace(/^\.\//, "");
 }

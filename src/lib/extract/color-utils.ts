@@ -175,7 +175,7 @@ export function contrastRatio(
  * Classify a CSS custom property name + value into a ColorGroup.
  * PDF §10 categorization rules.
  */
-export function classifyGroup(name: string, _value: string): ColorGroup {
+export function classifyGroup(name: string): ColorGroup {
   const n = name.toLowerCase();
 
   // chart-1..chart-N

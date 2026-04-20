@@ -155,8 +155,9 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  font-size: 14px;
-  line-height: 22px;
+  /* Slight fluid scale: keeps dashboard + tokens readable, improves small/large viewports */
+  font-size: clamp(14px, 0.8125rem + 0.35vw, 16px);
+  line-height: 1.571;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -176,58 +177,59 @@ html.light {
   color: var(--text-primary);
 }
 
-/* Typography helpers (PDF §2 type scale) ───────────────────────────────── */
+/* Typography helpers (PDF §2 type scale) — fluid on narrow viewports ───── */
 .text-display {
   font-family: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   font-weight: 700;
-  font-size: 36px;
-  line-height: 44px;
+  font-size: clamp(1.75rem, 1.35rem + 2.2vw, 2.25rem);
+  line-height: 1.15;
   letter-spacing: -0.02em;
 }
 .text-h1 {
   font-family: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   font-weight: 700;
-  font-size: 30px;
-  line-height: 38px;
+  font-size: clamp(1.5rem, 1.2rem + 1.6vw, 1.875rem);
+  line-height: 1.2;
   letter-spacing: -0.015em;
 }
 .text-h2 {
   font-family: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   font-weight: 600;
-  font-size: 24px;
-  line-height: 32px;
+  font-size: clamp(1.25rem, 1.05rem + 1.1vw, 1.5rem);
+  line-height: 1.25;
   letter-spacing: -0.01em;
 }
 .text-h3 {
   font-family: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   font-weight: 600;
-  font-size: 18px;
-  line-height: 26px;
+  font-size: clamp(1.0625rem, 0.95rem + 0.55vw, 1.125rem);
+  line-height: 1.35;
   letter-spacing: -0.005em;
 }
 .text-body-l {
-  font-size: 15px;
-  line-height: 24px;
+  /* Slightly larger than UI body; tracks fluid root (html font-size) */
+  font-size: 1.0625em;
+  line-height: 1.55;
 }
 .text-body {
-  font-size: 14px;
-  line-height: 22px;
+  font-size: 1em;
+  line-height: 1.571;
 }
 .text-body-s {
-  font-size: 13px;
-  line-height: 20px;
+  font-size: 0.9286em;
+  line-height: 1.45;
 }
 .text-caption {
-  font-size: 12px;
-  line-height: 16px;
+  font-size: max(11px, 0.857em);
+  line-height: 1.35;
   font-weight: 500;
   letter-spacing: 0.01em;
   text-transform: uppercase;
 }
 .text-mono {
   font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 13px;
-  line-height: 20px;
+  font-size: 0.9286em;
+  line-height: 1.45;
 }
 
 /* Motion ──────────────────────────────────────────────────────────────── */
