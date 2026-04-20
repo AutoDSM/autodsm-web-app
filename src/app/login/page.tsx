@@ -10,6 +10,34 @@ import { toast } from "sonner";
 const SUPABASE_SETUP_MESSAGE =
   "Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and a public key (NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY). On Vercel you can also use SUPABASE_URL and SUPABASE_ANON_KEY from the Supabase integration — then redeploy.";
 
+function parseOAuthReturnError(url: URL): string | null {
+  const description = url.searchParams.get("error_description");
+  if (description) {
+    try {
+      return decodeURIComponent(description.replace(/\+/g, " "));
+    } catch {
+      return description.replace(/\+/g, " ");
+    }
+  }
+  const raw = url.searchParams.get("error");
+  if (!raw) return null;
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(raw.replace(/\+/g, " "));
+  } catch {
+    decoded = raw;
+  }
+  if (decoded.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(decoded) as { error?: string; message?: string };
+      return parsed.error ?? parsed.message ?? decoded;
+    } catch {
+      /* fall through */
+    }
+  }
+  return decoded;
+}
+
 export default function LoginPage() {
   const [loading, setLoading] = React.useState<"github" | "google" | null>(null);
   const [errorFromQuery, setErrorFromQuery] = React.useState<string | null>(null);
@@ -17,7 +45,7 @@ export default function LoginPage() {
 
   React.useEffect(() => {
     const url = new URL(window.location.href);
-    const err = url.searchParams.get("error");
+    const err = parseOAuthReturnError(url);
     if (err) setErrorFromQuery(err);
   }, []);
 
@@ -29,9 +57,10 @@ export default function LoginPage() {
     setLoading(provider);
     try {
       const supabase = createClient();
-      const appOrigin =
-        process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
-        window.location.origin;
+      // Always use the live browser origin for OAuth return. NEXT_PUBLIC_APP_URL is often a
+      // single canonical host (e.g. vercel.app) while users may sign in from www or a custom
+      // domain — a mismatch causes Supabase to reject redirect_to ("requested path is invalid").
+      const appOrigin = window.location.origin.replace(/\/$/, "");
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {

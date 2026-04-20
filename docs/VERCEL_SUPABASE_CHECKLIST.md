@@ -78,7 +78,7 @@ For rotating Vercel preview URLs, either:
 - Add each preview URL after deploy, or  
 - Use a **wildcard** redirect pattern if your Supabase plan/settings allow (e.g. `https://*.vercel.app/auth/callback` — confirm in Supabase docs for your project).
 
-OAuth is started from the browser on [`/login`](../src/app/login/page.tsx) via `signInWithOAuth`, with `redirectTo` = `NEXT_PUBLIC_APP_URL` (if set) or `window.location.origin`, plus **`/auth/callback`**. That URL must appear in Supabase **Redirect URLs**.
+OAuth is started from the browser on [`/login`](../src/app/login/page.tsx) via `signInWithOAuth`, with `redirectTo` = **`window.location.origin` + `/auth/callback`** (so the return URL always matches the domain the user actually used — www, custom domain, or `*.vercel.app`). That exact URL must appear in Supabase **Redirect URLs**. `NEXT_PUBLIC_APP_URL` is still used elsewhere (e.g. links, webhooks); it does not override OAuth `redirectTo`.
 
 ### GitHub provider
 
@@ -107,7 +107,7 @@ On the Vercel deployment URL (e.g. deployment overview: [autodsm deployment](htt
 
 | Symptom | Likely fix |
 |---------|------------|
-| `{"error":"requested path is invalid"}` (often on `*.supabase.co`) | Usually **`GET /oauth/consent`** on the project host (not served on hosted projects). Fix **Site URL** to your Vercel app origin; ensure **Redirect URLs** include `https://<your-app>/auth/callback`. |
+| `{"error":"requested path is invalid"}` (often on `*.supabase.co`) | Usually **`GET /oauth/consent`** on the project host (not served on hosted projects), or **`redirect_to` not allowlisted**. Set **Site URL** to your primary app origin (not `*.supabase.co`). Add **every** origin you use to **Redirect URLs** (e.g. both `https://autodsm.vercel.app/auth/callback` and `https://www.autodsm.ai/auth/callback` if you use both). The app sends `redirect_to` for the **current browser origin** so it must match an allowlisted URL. |
 | “Redirect URL not allowed” | Add exact `https://<host>/auth/callback` to Supabase Redirect URLs. |
 | Login button does nothing / instant error | Missing or wrong `NEXT_PUBLIC_SUPABASE_*` in Vercel; redeploy. |
 | Callback then always `/login` | `exchangeCodeForSession` failing — check Supabase logs; confirm Site URL / redirect allowlist. |
