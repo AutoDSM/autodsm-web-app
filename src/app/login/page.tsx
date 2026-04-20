@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { createClient } from "@/lib/supabase/client";
 import { isSupabasePublicConfigured } from "@/lib/supabase/env";
 import { ProductIcon } from "@/components/brand/product-mark";
 import { Button } from "@/components/ui/button";
@@ -10,32 +9,44 @@ import { toast } from "sonner";
 const SUPABASE_SETUP_MESSAGE =
   "Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and a public key (NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY). On Vercel you can also use SUPABASE_URL and SUPABASE_ANON_KEY from the Supabase integration — then redeploy.";
 
-function parseOAuthReturnError(url: URL): string | null {
-  const description = url.searchParams.get("error_description");
-  if (description) {
-    try {
-      return decodeURIComponent(description.replace(/\+/g, " "));
-    } catch {
-      return description.replace(/\+/g, " ");
-    }
-  }
-  const raw = url.searchParams.get("error");
-  if (!raw) return null;
-  let decoded: string;
+/** Shown when Supabase Auth returns "requested path is invalid" (often Site URL = *.supabase.co). */
+const SITE_URL_FIX_HINT =
+  "In Supabase Dashboard → Authentication → URL Configuration: set Site URL to https://autodsm.vercel.app (your app), not https://…supabase.co. Add https://autodsm.vercel.app/auth/callback to Redirect URLs. In GitHub OAuth App settings, the callback must stay Supabase’s URL (…/auth/v1/callback).";
+
+function decodeOAuthParam(s: string): string {
   try {
-    decoded = decodeURIComponent(raw.replace(/\+/g, " "));
+    return decodeURIComponent(s.replace(/\+/g, " "));
   } catch {
-    decoded = raw;
+    return s.replace(/\+/g, " ");
   }
+}
+
+function parseErrorParam(raw: string | null): string | null {
+  if (!raw) return null;
+  const decoded = decodeOAuthParam(raw);
   if (decoded.startsWith("{")) {
     try {
       const parsed = JSON.parse(decoded) as { error?: string; message?: string };
       return parsed.error ?? parsed.message ?? decoded;
     } catch {
-      /* fall through */
+      return decoded;
     }
   }
   return decoded;
+}
+
+function parseOAuthReturnError(url: URL): string | null {
+  const description = url.searchParams.get("error_description");
+  if (description) return decodeOAuthParam(description);
+  return parseErrorParam(url.searchParams.get("error"));
+}
+
+function parseOAuthReturnErrorFromHash(hash: string): string | null {
+  if (!hash || hash.length < 2) return null;
+  const params = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
+  const description = params.get("error_description");
+  if (description) return decodeOAuthParam(description);
+  return parseErrorParam(params.get("error"));
 }
 
 export default function LoginPage() {
@@ -45,36 +56,19 @@ export default function LoginPage() {
 
   React.useEffect(() => {
     const url = new URL(window.location.href);
-    const err = parseOAuthReturnError(url);
+    const err =
+      parseOAuthReturnError(url) || parseOAuthReturnErrorFromHash(window.location.hash);
     if (err) setErrorFromQuery(err);
   }, []);
 
-  async function signIn(provider: "github" | "google") {
+  function signIn(provider: "github" | "google") {
     if (!supabaseReady) {
       toast.error(SUPABASE_SETUP_MESSAGE);
       return;
     }
     setLoading(provider);
-    try {
-      const supabase = createClient();
-      // Prefer NEXT_PUBLIC_APP_URL (e.g. https://autodsm.vercel.app on Vercel) so OAuth always
-      // returns to the canonical deploy URL. Fall back to the current origin for local dev when unset.
-      const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "").trim();
-      const appOrigin =
-        fromEnv && fromEnv.length > 0 ? fromEnv : window.location.origin.replace(/\/$/, "");
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${appOrigin}/auth/callback`,
-          scopes: provider === "github" ? "read:user user:email" : undefined,
-        },
-      });
-      if (error) toast.error(error.message);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Sign-in failed");
-    } finally {
-      setLoading(null);
-    }
+    // Server route sets PKCE cookies and redirectTo; avoids client-only OAuth edge cases.
+    window.location.assign(`/auth/oauth?provider=${encodeURIComponent(provider)}`);
   }
 
   return (
@@ -87,9 +81,16 @@ export default function LoginPage() {
         </p>
 
         {errorFromQuery ? (
-          <p className="mt-4 text-[13px] leading-[18px] text-[var(--text-secondary)]">
-            {errorFromQuery}
-          </p>
+          <div className="mt-4 space-y-2">
+            <p className="text-[13px] leading-[18px] text-[var(--text-secondary)]">
+              {errorFromQuery}
+            </p>
+            {errorFromQuery.toLowerCase().includes("requested path") ? (
+              <p className="text-[13px] leading-[18px] text-[var(--text-secondary)]">
+                {SITE_URL_FIX_HINT}
+              </p>
+            ) : null}
+          </div>
         ) : null}
 
         {!supabaseReady ? (

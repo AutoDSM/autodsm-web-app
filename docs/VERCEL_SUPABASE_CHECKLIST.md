@@ -79,7 +79,7 @@ For rotating Vercel preview URLs, either:
 - Add each preview URL after deploy, or  
 - Use a **wildcard** redirect pattern if your Supabase plan/settings allow (e.g. `https://*.vercel.app/auth/callback` — confirm in Supabase docs for your project).
 
-OAuth is started from the browser on [`/login`](../src/app/login/page.tsx) via `signInWithOAuth`, with `redirectTo` = **`NEXT_PUBLIC_APP_URL` + `/auth/callback`** when that env var is set (use **`https://autodsm.vercel.app`** for the current Vercel deploy), otherwise **`window.location.origin` + `/auth/callback`** for local dev. That exact URL must appear in Supabase **Redirect URLs** and should match **Site URL**’s host.
+OAuth starts with a full navigation to [`/auth/oauth`](../src/app/auth/oauth/route.ts) (server-side `signInWithOAuth` + PKCE cookies). `redirectTo` is **`NEXT_PUBLIC_APP_URL` + `/auth/callback`** when set (use **`https://autodsm.vercel.app`** on Vercel), otherwise the request’s forwarded host (local dev). That exact URL must appear in Supabase **Redirect URLs** and should match **Site URL**’s host.
 
 ### GitHub provider
 
