@@ -57,10 +57,11 @@ export default function LoginPage() {
     setLoading(provider);
     try {
       const supabase = createClient();
-      // Always use the live browser origin for OAuth return. NEXT_PUBLIC_APP_URL is often a
-      // single canonical host (e.g. vercel.app) while users may sign in from www or a custom
-      // domain — a mismatch causes Supabase to reject redirect_to ("requested path is invalid").
-      const appOrigin = window.location.origin.replace(/\/$/, "");
+      // Prefer NEXT_PUBLIC_APP_URL (e.g. https://autodsm.vercel.app on Vercel) so OAuth always
+      // returns to the canonical deploy URL. Fall back to the current origin for local dev when unset.
+      const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "").trim();
+      const appOrigin =
+        fromEnv && fromEnv.length > 0 ? fromEnv : window.location.origin.replace(/\/$/, "");
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {

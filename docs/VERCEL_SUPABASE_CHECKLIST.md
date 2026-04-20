@@ -46,7 +46,7 @@ Set in **Project → Settings → Environment Variables** for **Preview** and/or
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Optional legacy fallback if you do not use publishable key |
 | `SUPABASE_URL` / `SUPABASE_ANON_KEY` | Optional: some Vercel or Supabase integrations add these **without** `NEXT_PUBLIC_`. This repo’s [`next.config.mjs`](../next.config.mjs) maps them into the client bundle at build time so login works without duplicating keys. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only; only if routes need to bypass RLS (keep out of client) |
-| `NEXT_PUBLIC_APP_URL` | **Exact** deployed origin, e.g. `https://autodsm.vercel.app` or your custom domain (no trailing slash) |
+| `NEXT_PUBLIC_APP_URL` | **Exact** deployed origin (no trailing slash). Until the production domain launches, use **`https://autodsm.vercel.app`** so OAuth and links match Supabase **Site URL** / **Redirect URLs**. |
 
 After changing env vars, **redeploy** so the build picks them up.
 
@@ -66,19 +66,20 @@ https://<your-production-domain>/auth/callback
 https://<your-preview-deployment>.vercel.app/auth/callback
 ```
 
-**Current production deploys** (add each to **Redirect URLs** if you use that origin):
+**Current deploy (until the production domain launches)** — use **`https://autodsm.vercel.app`** as **Site URL** and add this **Redirect URL**:
 
 - `https://autodsm.vercel.app/auth/callback`
-- `https://www.autodsm.ai/auth/callback` (production alias on the Vercel project)
 
-Vercel **Production** should also define `NEXT_PUBLIC_APP_URL` to the same primary origin you use as **Site URL** (e.g. `https://autodsm.vercel.app` with no trailing slash).
+When you add a custom domain later, add its `/auth/callback` here too and align `NEXT_PUBLIC_APP_URL` + **Site URL**.
+
+Vercel **Production** should define `NEXT_PUBLIC_APP_URL=https://autodsm.vercel.app` (no trailing slash).
 
 For rotating Vercel preview URLs, either:
 
 - Add each preview URL after deploy, or  
 - Use a **wildcard** redirect pattern if your Supabase plan/settings allow (e.g. `https://*.vercel.app/auth/callback` — confirm in Supabase docs for your project).
 
-OAuth is started from the browser on [`/login`](../src/app/login/page.tsx) via `signInWithOAuth`, with `redirectTo` = **`window.location.origin` + `/auth/callback`** (so the return URL always matches the domain the user actually used — www, custom domain, or `*.vercel.app`). That exact URL must appear in Supabase **Redirect URLs**. `NEXT_PUBLIC_APP_URL` is still used elsewhere (e.g. links, webhooks); it does not override OAuth `redirectTo`.
+OAuth is started from the browser on [`/login`](../src/app/login/page.tsx) via `signInWithOAuth`, with `redirectTo` = **`NEXT_PUBLIC_APP_URL` + `/auth/callback`** when that env var is set (use **`https://autodsm.vercel.app`** for the current Vercel deploy), otherwise **`window.location.origin` + `/auth/callback`** for local dev. That exact URL must appear in Supabase **Redirect URLs** and should match **Site URL**’s host.
 
 ### GitHub provider
 
@@ -107,7 +108,7 @@ On the Vercel deployment URL (e.g. deployment overview: [autodsm deployment](htt
 
 | Symptom | Likely fix |
 |---------|------------|
-| `{"error":"requested path is invalid"}` (often on `*.supabase.co`) | Usually **`GET /oauth/consent`** on the project host (not served on hosted projects), or **`redirect_to` not allowlisted**. Set **Site URL** to your primary app origin (not `*.supabase.co`). Add **every** origin you use to **Redirect URLs** (e.g. both `https://autodsm.vercel.app/auth/callback` and `https://www.autodsm.ai/auth/callback` if you use both). The app sends `redirect_to` for the **current browser origin** so it must match an allowlisted URL. |
+| `{"error":"requested path is invalid"}` (often on `*.supabase.co`) | Usually **`GET /oauth/consent`** on the project host (not served on hosted projects), or **`redirect_to` not allowlisted**. Set **Site URL** to **`https://autodsm.vercel.app`** (for now) and **Redirect URLs** to `https://autodsm.vercel.app/auth/callback`. Ensure Vercel has `NEXT_PUBLIC_APP_URL=https://autodsm.vercel.app` so OAuth `redirect_to` matches. |
 | “Redirect URL not allowed” | Add exact `https://<host>/auth/callback` to Supabase Redirect URLs. |
 | Login button does nothing / instant error | Missing or wrong `NEXT_PUBLIC_SUPABASE_*` in Vercel; redeploy. |
 | Callback then always `/login` | `exchangeCodeForSession` failing — check Supabase logs; confirm Site URL / redirect allowlist. |
