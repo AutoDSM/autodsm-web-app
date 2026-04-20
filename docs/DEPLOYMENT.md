@@ -32,6 +32,12 @@ If the anonymous quota runs out, three options:
 
 Target: Vercel + Supabase + GitHub App.
 
+### Vercel + Supabase Auth (contribute build on `brand-book-v1`)
+
+For the **`autodsm`** Vercel project, GitHub **`brand-book-v1`**, and Supabase project **`mujlucfkoqvghvdikkhw`**, follow the step-by-step checklist:
+
+- **[docs/VERCEL_SUPABASE_CHECKLIST.md](./VERCEL_SUPABASE_CHECKLIST.md)**
+
 ### 1. Supabase project
 
 ```bash
@@ -71,6 +77,8 @@ Copy `.env.example` → `.env.local` and fill:
 ```bash
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+# Prefer publishable key (newer projects); anon key still supported
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
 
