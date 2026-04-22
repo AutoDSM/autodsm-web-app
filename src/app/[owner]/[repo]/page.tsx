@@ -123,7 +123,7 @@ export default function PublicOverviewPage() {
       </section>
 
       {/* Metrics */}
-      <section className="mb-14 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <section className="mb-14 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
         {metrics.map((m) => (
           <Link
             key={m.label}

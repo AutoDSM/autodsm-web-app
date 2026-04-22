@@ -40,7 +40,7 @@ function ShellTopBar({ userLabel }: { userLabel?: string }) {
                 aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                 aria-expanded={!sidebarCollapsed}
                 onClick={toggleSidebar}
-                className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-md text-[var(--text-tertiary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] active:scale-[0.97] md:inline-flex"
+                className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-md text-[var(--text-tertiary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] active:scale-[0.97] md:inline-flex"
               >
                 {sidebarCollapsed ? (
                   <PanelRight size={18} strokeWidth={1.5} />
@@ -60,7 +60,7 @@ function ShellTopBar({ userLabel }: { userLabel?: string }) {
                 type="button"
                 aria-label="Open navigation menu"
                 onClick={() => setMobileNavOpen(true)}
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[var(--text-tertiary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] active:scale-[0.97] md:hidden"
+                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-[var(--text-tertiary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] active:scale-[0.97] md:hidden"
               >
                 <Menu size={18} strokeWidth={1.5} />
               </button>

@@ -45,7 +45,7 @@ function Message({
         aria-label={ariaLabel}
         aria-labelledby={ariaLabelledBy}
         className={cn(
-          "flex w-full max-w-[90%] items-start gap-2",
+          "flex min-w-0 w-full max-w-[90%] items-start gap-2",
           from === "user" ? "ms-auto" : "me-auto",
           className
         )}
@@ -87,7 +87,7 @@ function MessageContent({ className, ...props }: MessageContentProps) {
       data-slot="message-content"
       className={cn(
         /* User bubble: --bg-canvas = light F3F3F4 / dark 0f0f11 (see globals.css) */
-        "min-h-10 rounded-[20px] text-sm leading-6",
+        "min-h-10 min-w-0 rounded-[20px] text-sm leading-6",
         from === "user"
           ? "w-fit max-w-full bg-[var(--bg-canvas)] px-4 py-2 text-foreground"
           : "w-full max-w-full bg-transparent px-2 text-muted-foreground",

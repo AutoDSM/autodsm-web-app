@@ -86,8 +86,8 @@ function ScanningPageInner() {
   }, [repo, router]);
 
   return (
-    <div className="min-h-screen grid place-items-center bg-[var(--bg-primary)] px-6">
-      <div className="w-full max-w-[520px] rounded-2xl border-0 bg-[var(--bg-elevated)] p-10 shadow-[var(--shadow-md)]">
+    <div className="grid min-h-screen min-w-0 place-items-center bg-[var(--bg-primary)] px-4 py-8 sm:px-6">
+      <div className="w-full min-w-0 max-w-[520px] rounded-2xl border-0 bg-[var(--bg-elevated)] p-6 shadow-[var(--shadow-md)] sm:p-8 md:p-10">
         <ProductIcon
           size={32}
           className="autodsm-pulse"

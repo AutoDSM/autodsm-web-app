@@ -75,8 +75,8 @@ export default function OnboardingPage() {
   const datalistId = "autodsm-github-repo-suggestions";
 
   return (
-    <div className="min-h-screen grid place-items-center bg-[var(--bg-primary)] px-6">
-      <Card className="w-full max-w-[460px] p-10">
+    <div className="grid min-h-screen min-w-0 place-items-center bg-[var(--bg-primary)] px-4 py-8 sm:px-6">
+      <Card className="w-full min-w-0 max-w-[460px] p-6 sm:p-8 md:p-10">
         <ProductIcon size={28} priority />
         <h2 className="mt-6 text-h2 text-[var(--text-primary)]">Connect a repository</h2>
         <p className="mt-2 text-body-s text-[var(--text-secondary)]">

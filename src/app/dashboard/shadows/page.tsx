@@ -12,6 +12,7 @@ import {
   TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
 import { brandTokenSurface } from "@/components/ui/brand-card-tokens";
+import { tokenTableScrollRegionClassName } from "@/lib/dashboard-content-layout";
 import { cn } from "@/lib/utils";
 
 const HERO_DESC =
@@ -79,15 +80,15 @@ export default function ShadowsPage() {
             >
               {shadow.name}
             </div>
-            <div className="flex gap-6">
+            <div className="flex flex-wrap justify-center gap-6 sm:justify-start">
               {/* Light surface */}
-              <div className="flex flex-col items-center gap-2">
+              <div className="flex w-full max-w-[160px] flex-col items-center gap-2">
                 <div
-                  className="w-[160px] h-[96px] bg-[#f9f9fa] rounded-xl flex items-center justify-center"
+                  className="flex h-[96px] w-full max-w-[160px] min-w-0 items-center justify-center rounded-xl bg-[#f9f9fa]"
                   style={{ boxShadow: shadow.value }}
                 >
                   <div
-                    className="w-16 h-16 bg-[var(--bg-elevated)] rounded-xl"
+                    className="h-16 w-16 rounded-xl bg-[var(--bg-elevated)]"
                     style={{ boxShadow: shadow.value }}
                   />
                 </div>
@@ -100,13 +101,13 @@ export default function ShadowsPage() {
               </div>
 
               {/* Dark surface */}
-              <div className="flex flex-col items-center gap-2">
+              <div className="flex w-full max-w-[160px] flex-col items-center gap-2">
                 <div
-                  className="w-[160px] h-[96px] rounded-xl flex items-center justify-center"
+                  className="flex h-[96px] w-full max-w-[160px] min-w-0 items-center justify-center rounded-xl"
                   style={{ backgroundColor: "#0A0A0B", boxShadow: "none" }}
                 >
                   <div
-                    className="w-16 h-16 bg-[var(--bg-elevated)] rounded-xl"
+                    className="h-16 w-16 rounded-xl bg-[var(--bg-elevated)]"
                     style={{ boxShadow: shadow.value }}
                   />
                 </div>
@@ -130,7 +131,7 @@ export default function ShadowsPage() {
         {profile.shadows.map((shadow) => (
           <div
             key={shadow.name}
-            className="flex items-start py-5 border-b border-[var(--border-subtle)] gap-6"
+            className="flex flex-col gap-4 border-b border-[var(--border-subtle)] py-5 md:flex-row md:items-start md:gap-6"
           >
             {/* Preview card */}
             <div
@@ -139,7 +140,7 @@ export default function ShadowsPage() {
             />
 
             {/* Middle */}
-            <div className="flex-1 pl-2 min-w-0">
+            <div className="min-w-0 flex-1 pl-2">
               <div
                 className="text-[var(--text-primary)] font-medium mb-0.5"
                 style={{ fontFamily: "var(--font-geist-sans)", fontSize: 14 }}
@@ -162,8 +163,8 @@ export default function ShadowsPage() {
                   >
                     Layers ({shadow.layers.length})
                   </summary>
-                  <div className="mt-2 overflow-x-auto">
-                    <table className="text-[11px] border-collapse w-full">
+                  <div className={cn("mt-2", tokenTableScrollRegionClassName)}>
+                    <table className="w-full border-collapse text-[11px]">
                       <thead>
                         <tr>
                           {[
@@ -218,7 +219,7 @@ export default function ShadowsPage() {
             </div>
 
             {/* Right: CSS value + copy */}
-            <div className="w-[280px] shrink-0">
+            <div className="w-full min-w-0 shrink-0 md:max-w-[280px] md:shrink-0">
               <div className="flex items-start gap-1">
                 <span
                   className="text-[var(--text-secondary)] break-all flex-1"

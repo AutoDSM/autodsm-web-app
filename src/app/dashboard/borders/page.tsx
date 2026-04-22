@@ -78,13 +78,14 @@ export default function BordersPage() {
           return (
             <div
               key={`${border.name}-${i}`}
-              className="flex items-center gap-8 py-5 border-b border-[var(--border-subtle)]"
+              className="flex flex-col gap-4 border-b border-[var(--border-subtle)] py-5 lg:flex-row lg:items-center lg:gap-8"
             >
+              <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-6">
               {/* Preview card */}
               <div
                 className={cn(
                   brandTokenSurface,
-                  "h-16 w-24 shrink-0 flex items-center justify-center",
+                  "flex h-16 w-24 shrink-0 items-center justify-center",
                 )}
                 style={{
                   border: `${border.width} ${border.style} ${border.color}`,
@@ -92,7 +93,7 @@ export default function BordersPage() {
               />
 
               {/* Middle: name */}
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <div
                   className="text-[var(--text-primary)] font-medium"
                   style={{ fontFamily: "var(--font-geist-sans)", fontSize: 14 }}
@@ -106,9 +107,10 @@ export default function BordersPage() {
                   {border.source}
                 </div>
               </div>
+              </div>
 
               {/* Right: spec */}
-              <div className="w-[300px] shrink-0">
+              <div className="w-full min-w-0 shrink-0 lg:max-w-[300px]">
                 <div className="flex flex-wrap gap-4">
                   <div>
                     <div

@@ -36,8 +36,8 @@ function UnsupportedPageInner() {
   }
 
   return (
-    <div className="min-h-screen grid place-items-center bg-[var(--bg-primary)] px-6">
-      <div className="w-full max-w-[460px] rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-10">
+    <div className="grid min-h-screen min-w-0 place-items-center bg-[var(--bg-primary)] px-4 py-8 sm:px-6">
+      <div className="w-full min-w-0 max-w-[460px] rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-6 sm:p-8 md:p-10">
         <ProductIcon size={28} />
         <h2 className="mt-6 text-h2 text-[var(--text-primary)]">
           autoDSM currently supports React + TypeScript.

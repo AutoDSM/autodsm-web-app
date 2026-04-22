@@ -93,10 +93,10 @@ export default function SpacingPage() {
           {sorted.map((s) => (
             <div
               key={s.name}
-              className="flex items-center gap-6 px-4 py-3"
+              className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-6"
             >
               {/* Left: spec */}
-              <div className="w-[140px] shrink-0">
+              <div className="w-full min-w-0 shrink-0 sm:w-[140px]">
                 <div
                   className="text-[var(--text-primary)]"
                   style={{

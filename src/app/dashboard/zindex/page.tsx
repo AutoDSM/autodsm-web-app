@@ -59,14 +59,15 @@ export default function ZIndexPage() {
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Stacking diagram */}
-        <div className={cn(brandTokenSurface, "min-w-0 p-6")}>
+        <div className={cn(brandTokenSurface, "min-w-0 p-4 sm:p-6")}>
           <div
             className="text-[var(--text-tertiary)] mb-4"
             style={{ fontFamily: "var(--font-geist-mono)", fontSize: 10 }}
           >
             STACKING PREVIEW
           </div>
-          <div className="relative h-[280px] flex items-end justify-center">
+          <div className="min-w-0 overflow-x-auto overflow-y-hidden [-webkit-overflow-scrolling:touch]">
+          <div className="relative mx-auto h-[min(280px,50svh)] min-h-[180px] w-full min-w-[280px] sm:min-h-[240px] sm:h-[280px] sm:min-w-0">
             {sorted.map((z, i) => {
               const offset = i * 14;
               return (
@@ -89,6 +90,7 @@ export default function ZIndexPage() {
               );
             })}
           </div>
+          </div>
         </div>
 
         {/* Table */}
@@ -99,9 +101,9 @@ export default function ZIndexPage() {
             return (
               <div
                 key={z.name}
-                className="flex items-center gap-4 border-b border-[var(--border-subtle)] px-4 py-4"
+                className="flex flex-col gap-2 border-b border-[var(--border-subtle)] px-4 py-4 sm:flex-row sm:items-center sm:gap-4"
               >
-                <div className="w-10 text-right shrink-0">
+                <div className="w-10 shrink-0 text-left sm:text-right">
                   <span
                     className="text-[var(--accent)]"
                     style={{ fontFamily: "var(--font-geist-mono)", fontSize: 14 }}
@@ -125,9 +127,9 @@ export default function ZIndexPage() {
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex min-w-0 items-center gap-1 self-start sm:self-center">
                   <span
-                    className="text-[var(--text-tertiary)]"
+                    className="min-w-0 break-all text-[var(--text-tertiary)]"
                     style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }}
                   >
                     {cls}

@@ -12,6 +12,7 @@ import {
   TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
 import { brandTokenSurface } from "@/components/ui/brand-card-tokens";
+import { tokenTableScrollRegionClassName } from "@/lib/dashboard-content-layout";
 import { cn } from "@/lib/utils";
 
 const HERO_DESC = "Border-radius tokens for rounded corners—extracted from your repository.";
@@ -98,8 +99,8 @@ export default function RadiiPage() {
         <h2 className="text-h2 text-[var(--text-primary)] mb-6">
           Applied Examples
         </h2>
-        <div className={cn(brandTokenSurface, "overflow-x-auto")}>
-          <table className="border-collapse min-w-full">
+        <div className={cn(brandTokenSurface, tokenTableScrollRegionClassName)}>
+          <table className="min-w-full border-collapse">
             <thead>
               <tr>
                 <th className="w-[100px] h-[40px] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 text-left">

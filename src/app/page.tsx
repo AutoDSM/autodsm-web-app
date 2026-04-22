@@ -89,8 +89,8 @@ function TopNav() {
   ];
 
   return (
-    <header className="sticky top-0 z-40 h-[72px] px-6 sm:px-8 bg-[var(--bg-primary)]/80 backdrop-blur-lg border-b border-[var(--border-subtle)]">
-      <div className="max-w-[1200px] mx-auto h-full flex items-center justify-between gap-6">
+    <header className="sticky top-0 z-40 h-[72px] border-b border-[var(--border-subtle)] bg-[var(--bg-primary)]/80 px-4 backdrop-blur-lg sm:px-6 sm:px-8">
+      <div className="mx-auto flex h-full w-full min-w-0 max-w-[1200px] items-center justify-between gap-3 sm:gap-6">
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <ProductWordmark width={120} priority />
         </Link>

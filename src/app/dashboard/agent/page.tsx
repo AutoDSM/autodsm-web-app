@@ -81,11 +81,11 @@ export default function AgentPage() {
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-1 flex-col">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col">
       {messages.length === 0 ? (
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-5 py-10 sm:px-8">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center px-4 py-8 sm:px-8 sm:py-10">
           <h1
-            className="max-w-[520px] text-center text-[var(--text-primary)]"
+            className="w-full min-w-0 max-w-[520px] px-1 text-center text-[var(--text-primary)]"
             style={{
               fontFamily: "Manrope",
               fontWeight: 700,
@@ -99,7 +99,7 @@ export default function AgentPage() {
 
           <form
             onSubmit={handleSubmit}
-            className="mt-9 w-full max-w-[560px] sm:mt-10"
+            className="mt-9 w-full min-w-0 max-w-[560px] sm:mt-10"
           >
             <PromptInput
               onSubmit={(value) => submitPrompt(value)}
@@ -164,8 +164,8 @@ export default function AgentPage() {
         </div>
       ) : (
         <>
-          <div className="min-h-0 flex-1 overflow-hidden px-5 py-4 sm:px-8">
-            <div className="mx-auto h-full max-w-2xl">
+          <div className="min-h-0 min-w-0 flex-1 overflow-hidden px-4 py-4 sm:px-8">
+            <div className="mx-auto h-full min-w-0 max-w-2xl">
               <Thread className="h-full">
                 <ThreadContent className="items-stretch">
                   {messages.map((msg) => (
@@ -199,9 +199,9 @@ export default function AgentPage() {
 
           <form
             onSubmit={handleSubmit}
-            className="shrink-0 border-t border-[var(--border-subtle)] px-4 py-4 sm:px-6"
+            className="shrink-0 border-t border-[var(--border-subtle)] px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6"
           >
-            <div className="mx-auto max-w-2xl">
+            <div className="mx-auto min-w-0 max-w-2xl">
               <PromptInput
                 onSubmit={(value) => submitPrompt(value)}
                 className="min-h-[112px]"

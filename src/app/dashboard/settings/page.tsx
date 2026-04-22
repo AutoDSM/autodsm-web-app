@@ -4,6 +4,7 @@ import * as React from "react";
 import { useTheme } from "next-themes";
 import { useBrandStore } from "@/stores/brand";
 import { brandTokenSurfaceBordered } from "@/components/ui/brand-card-tokens";
+import { dashboardMainContentClassName } from "@/lib/dashboard-content-layout";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,7 +77,7 @@ export default function SettingsPage() {
   const initials = owner ? owner[0].toUpperCase() : "?";
 
   return (
-    <div className="w-full min-w-0 max-w-[1280px] px-6 py-8 sm:px-10 sm:py-10">
+    <div className={dashboardMainContentClassName}>
       <h1 className="text-h1 text-[var(--text-primary)]">Settings</h1>
       <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-[var(--text-secondary)]">
         Manage your account, repository, and brand book visibility.
