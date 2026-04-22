@@ -11,7 +11,9 @@ import {
   TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
 import { SectionHeading } from "@/components/dashboard/section-heading";
+import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
 import { TokenCard } from "@/components/dashboard/token-card";
+import { TokenRow, TokenRowGroup } from "@/components/dashboard/token-row";
 import { cn } from "@/lib/utils";
 import type { BrandGradient } from "@/lib/brand/types";
 
@@ -76,44 +78,94 @@ export default function GradientsPage() {
       }
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
-      <div className="space-y-8">
+      <div className="space-y-6">
         <TokenPageProvenanceLine>
           Auto-extracted from {source} · {profile.gradients.length} tokens
         </TokenPageProvenanceLine>
 
-        <section>
-          <SectionHeading description="Previews are rendered at 140px height. Hover any stop chip to inspect its hex.">
-            All gradients
-          </SectionHeading>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {profile.gradients.map((g) => (
-              <TokenCard
-                key={g.name}
-                eyebrow={g.type.toUpperCase()}
-                tag={g.direction}
-                previewHeight={140}
-                previewClassName="p-0 overflow-hidden"
-                preview={
-                  <div
-                    className="h-full w-full"
-                    style={{ background: g.cssValue }}
-                  />
-                }
-                name={g.name}
-                subtitle={`${g.stops.length} stop${g.stops.length === 1 ? "" : "s"}`}
-                copyValue={`background: ${g.cssValue};`}
-                copyLabel={g.cssValue}
-                footer={
-                  <div className="flex flex-wrap gap-1.5">
-                    {g.stops.map((stop, i) => (
-                      <StopPill key={i} stop={stop} />
+        <TokenPagePillTabs
+          defaultValue="gallery"
+          tabs={[
+            {
+              value: "gallery",
+              label: "Gallery",
+              content: (
+                <section>
+                  <SectionHeading description="Previews are rendered at 140px height. Hover any stop chip to inspect its hex.">
+                    All gradients
+                  </SectionHeading>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    {profile.gradients.map((g) => (
+                      <TokenCard
+                        key={g.name}
+                        eyebrow={g.type.toUpperCase()}
+                        tag={g.direction}
+                        previewHeight={140}
+                        previewClassName="p-0 overflow-hidden"
+                        preview={
+                          <div
+                            className="h-full w-full"
+                            style={{ background: g.cssValue }}
+                          />
+                        }
+                        name={g.name}
+                        subtitle={`${g.stops.length} stop${g.stops.length === 1 ? "" : "s"}`}
+                        copyValue={`background: ${g.cssValue};`}
+                        copyLabel={g.cssValue}
+                        footer={
+                          <div className="flex flex-wrap gap-1.5">
+                            {g.stops.map((stop, i) => (
+                              <StopPill key={i} stop={stop} />
+                            ))}
+                          </div>
+                        }
+                      />
                     ))}
                   </div>
-                }
-              />
-            ))}
-          </div>
-        </section>
+                </section>
+              ),
+            },
+            {
+              value: "list",
+              label: "List",
+              content: (
+                <section>
+                  <SectionHeading description="Compact rows — tap to copy the full CSS background declaration.">
+                    All gradients
+                  </SectionHeading>
+                  <TokenRowGroup>
+                    {profile.gradients.map((g) => (
+                      <TokenRow
+                        key={g.name}
+                        preview={
+                          <div
+                            aria-hidden
+                            className="h-10 w-10 rounded-[6px] border border-[var(--border-default)]"
+                            style={{ background: g.cssValue }}
+                          />
+                        }
+                        name={g.name}
+                        subtitle={g.direction}
+                        meta={
+                          <div className="space-y-0.5 text-[var(--text-primary)]">
+                            <div className="line-clamp-2 font-mono text-[11px] text-[var(--text-tertiary)]">
+                              {g.cssValue}
+                            </div>
+                            <div className="text-[var(--text-tertiary)]">
+                              {g.stops.length} stop{g.stops.length === 1 ? "" : "s"}
+                            </div>
+                          </div>
+                        }
+                        copyValue={`background: ${g.cssValue};`}
+                        copyLabel={g.cssValue}
+                      />
+                    ))}
+                  </TokenRowGroup>
+                </section>
+              ),
+            },
+          ]}
+        />
       </div>
     </BrandTokenPageLayout>
   );

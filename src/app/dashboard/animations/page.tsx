@@ -11,7 +11,9 @@ import {
   TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
 import { SectionHeading } from "@/components/dashboard/section-heading";
+import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
 import { TokenCard } from "@/components/dashboard/token-card";
+import { brandDashboardCardRadius } from "@/components/ui/brand-card-tokens";
 import { cn } from "@/lib/utils";
 import type { BrandAnimation } from "@/lib/brand/types";
 
@@ -22,7 +24,6 @@ function AnimatedPreview({ anim, nonce }: { anim: BrandAnimation; nonce: number 
   const dur = anim.duration || "400ms";
   const ease = anim.timingFunction || "cubic-bezier(0.4, 0, 0.2, 1)";
 
-  // Two visual modes so common names get legible demos.
   const kind: "pulse" | "slide" | "spin" | "fade" = (() => {
     const n = anim.name.toLowerCase();
     if (/spin|rotate/.test(n)) return "spin";
@@ -51,7 +52,6 @@ function AnimatedPreview({ anim, nonce }: { anim: BrandAnimation; nonce: number 
         )}
         style={common}
       />
-      {/* scoped keyframes */}
       <style jsx>{`
         .anim-pulse {
           animation-name: adm-pulse;
@@ -109,6 +109,80 @@ function AnimatedPreview({ anim, nonce }: { anim: BrandAnimation; nonce: number 
   );
 }
 
+function EmptyTabStrip({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className={cn(
+        brandDashboardCardRadius,
+        "border border-dashed border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-4 py-8 text-center text-[13px] text-[var(--text-tertiary)]",
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+function MotionGrid({
+  list,
+  ticks,
+  allTick,
+  replay,
+}: {
+  list: BrandAnimation[];
+  ticks: Record<string, number>;
+  allTick: number;
+  replay: (name: string) => void;
+}) {
+  if (list.length === 0) {
+    return (
+      <EmptyTabStrip>No tokens of this type were found in this repository.</EmptyTabStrip>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {list.map((anim) => {
+        const css =
+          anim.type === "keyframes"
+            ? `${anim.name} ${anim.duration} ${anim.timingFunction}${anim.delay ? ` ${anim.delay}` : ""}`
+            : `${anim.duration} ${anim.timingFunction}${anim.delay ? ` ${anim.delay}` : ""}`;
+        return (
+          <TokenCard
+            key={anim.name}
+            eyebrow={anim.type === "keyframes" ? "KEYFRAMES" : "TRANSITION"}
+            tag={anim.tailwindClass ?? (anim.isCustom ? "custom" : undefined)}
+            previewHeight={140}
+            preview={
+              <AnimatedPreview
+                anim={anim}
+                nonce={(ticks[anim.name] ?? 0) + allTick}
+              />
+            }
+            name={anim.name}
+            subtitle={anim.tailwindClass}
+            specs={[
+              { icon: <Timer strokeWidth={1.6} />, label: anim.duration },
+              { icon: <Activity strokeWidth={1.6} />, label: anim.timingFunction },
+            ]}
+            copyValue={css}
+            copyLabel={css}
+            footer={
+              <button
+                type="button"
+                onClick={() => replay(anim.name)}
+                className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-2.5 text-[11px] font-medium text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+              >
+                <Play size={12} strokeWidth={1.6} />
+                Replay
+              </button>
+            }
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 export default function AnimationsPage() {
   const profile = useBrandStore((s) => s.profile);
   const [ticks, setTicks] = React.useState<Record<string, number>>({});
@@ -120,7 +194,7 @@ export default function AnimationsPage() {
 
   const replayAll = React.useCallback(() => {
     setAllTick((t) => t + 1);
-    setTicks({}); // reset individual overrides
+    setTicks({});
   }, []);
 
   if (!profile || profile.animations.length === 0) {
@@ -146,6 +220,9 @@ export default function AnimationsPage() {
   }
 
   const source = profile.meta.cssSource || profile.meta.tailwindConfigPath || "repo";
+  const keyframesList = profile.animations.filter((a) => a.type === "keyframes");
+  const transitionsList = profile.animations.filter((a) => a.type === "transition");
+  const defaultTab = keyframesList.length > 0 ? "keyframes" : "transitions";
 
   return (
     <BrandTokenPageLayout
@@ -158,68 +235,78 @@ export default function AnimationsPage() {
       }
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
-      <div className="space-y-8">
+      <div className="space-y-6">
         <TokenPageProvenanceLine>
           Auto-extracted from {source} · {profile.animations.length} tokens
         </TokenPageProvenanceLine>
 
-        <section>
-          <SectionHeading
-            description="Previews are indicative — exact motion may vary based on where your app applies the token."
-            action={
-              <button
-                type="button"
-                onClick={replayAll}
-                className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-2.5 text-[11px] font-medium text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-              >
-                <Play size={12} strokeWidth={1.6} />
-                Play all
-              </button>
-            }
-          >
-            Motion
-          </SectionHeading>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {profile.animations.map((anim) => {
-              const css =
-                anim.type === "keyframes"
-                  ? `${anim.name} ${anim.duration} ${anim.timingFunction}${anim.delay ? ` ${anim.delay}` : ""}`
-                  : `${anim.duration} ${anim.timingFunction}${anim.delay ? ` ${anim.delay}` : ""}`;
-              return (
-                <TokenCard
-                  key={anim.name}
-                  eyebrow={anim.type === "keyframes" ? "KEYFRAMES" : "TRANSITION"}
-                  tag={anim.tailwindClass ?? (anim.isCustom ? "custom" : undefined)}
-                  previewHeight={140}
-                  preview={
-                    <AnimatedPreview
-                      anim={anim}
-                      nonce={(ticks[anim.name] ?? 0) + allTick}
-                    />
-                  }
-                  name={anim.name}
-                  subtitle={anim.tailwindClass}
-                  specs={[
-                    { icon: <Timer strokeWidth={1.6} />, label: anim.duration },
-                    { icon: <Activity strokeWidth={1.6} />, label: anim.timingFunction },
-                  ]}
-                  copyValue={css}
-                  copyLabel={css}
-                  footer={
-                    <button
-                      type="button"
-                      onClick={() => replay(anim.name)}
-                      className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-2.5 text-[11px] font-medium text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-                    >
-                      <Play size={12} strokeWidth={1.6} />
-                      Replay
-                    </button>
-                  }
-                />
-              );
-            })}
-          </div>
-        </section>
+        <TokenPagePillTabs
+          defaultValue={defaultTab}
+          tabs={[
+            {
+              value: "keyframes",
+              label: "Keyframes",
+              content: (
+                <section>
+                  <SectionHeading
+                    description="Previews are indicative — exact motion may vary based on where your app applies the token."
+                    action={
+                      keyframesList.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={replayAll}
+                          className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-2.5 text-[11px] font-medium text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+                        >
+                          <Play size={12} strokeWidth={1.6} />
+                          Play all
+                        </button>
+                      ) : undefined
+                    }
+                  >
+                    Keyframes
+                  </SectionHeading>
+                  <MotionGrid
+                    list={keyframesList}
+                    ticks={ticks}
+                    allTick={allTick}
+                    replay={replay}
+                  />
+                </section>
+              ),
+            },
+            {
+              value: "transitions",
+              label: "Transitions",
+              content: (
+                <section>
+                  <SectionHeading
+                    description="Duration and easing pairs extracted from your theme."
+                    action={
+                      transitionsList.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={replayAll}
+                          className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-2.5 text-[11px] font-medium text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+                        >
+                          <Play size={12} strokeWidth={1.6} />
+                          Play all
+                        </button>
+                      ) : undefined
+                    }
+                  >
+                    Transitions
+                  </SectionHeading>
+                  <MotionGrid
+                    list={transitionsList}
+                    ticks={ticks}
+                    allTick={allTick}
+                    replay={replay}
+                  />
+                </section>
+              ),
+            },
+          ]}
+        />
       </div>
     </BrandTokenPageLayout>
   );

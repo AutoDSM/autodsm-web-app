@@ -11,7 +11,10 @@ import {
   TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
 import { SectionHeading } from "@/components/dashboard/section-heading";
+import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
 import { TokenCard } from "@/components/dashboard/token-card";
+import { brandDashboardCardRadius } from "@/components/ui/brand-card-tokens";
+import { cn } from "@/lib/utils";
 
 const CHECKERBOARD = `repeating-conic-gradient(
   var(--border-subtle) 0% 25%,
@@ -58,46 +61,81 @@ export default function OpacityPage() {
       }
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
-      <div className="space-y-8">
+      <div className="space-y-6">
         <TokenPageProvenanceLine>
           Auto-extracted from {source} · {sorted.length} tokens
         </TokenPageProvenanceLine>
 
-        <section>
-          <SectionHeading description="Ordered low to high. Tiles use the accent color against a checkerboard so alpha is visible.">
-            Scale
-          </SectionHeading>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {sorted.map((o) => (
-              <TokenCard
-                key={o.name + o.value}
-                eyebrow="OPACITY"
-                tag={o.isCustom ? "custom" : undefined}
-                previewHeight={140}
-                previewClassName="p-0 overflow-hidden"
-                preview={
-                  <div
-                    className="flex h-full w-full items-center justify-center"
-                    style={{ background: CHECKERBOARD }}
-                  >
-                    <div
-                      className="h-16 w-28 rounded-[10px] bg-[var(--accent)]"
-                      style={{ opacity: o.value }}
-                    />
+        <TokenPagePillTabs
+          defaultValue="scale"
+          tabs={[
+            {
+              value: "scale",
+              label: "Scale",
+              content: (
+                <section>
+                  <SectionHeading description="Ordered low to high. Tiles use the accent color against a checkerboard so alpha is visible.">
+                    Scale
+                  </SectionHeading>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    {sorted.map((o) => (
+                      <TokenCard
+                        key={o.name + o.value}
+                        eyebrow="OPACITY"
+                        tag={o.isCustom ? "custom" : undefined}
+                        previewHeight={140}
+                        previewClassName="p-0 overflow-hidden"
+                        preview={
+                          <div
+                            className="flex h-full w-full items-center justify-center"
+                            style={{ background: CHECKERBOARD }}
+                          >
+                            <div
+                              className="h-16 w-28 rounded-[10px] bg-[var(--accent)]"
+                              style={{ opacity: o.value }}
+                            />
+                          </div>
+                        }
+                        name={o.name}
+                        subtitle={`opacity-${o.name}`}
+                        specs={[
+                          { label: o.percentage },
+                          { label: o.value.toFixed(2) },
+                        ]}
+                        copyValue={`opacity: ${o.value};`}
+                        copyLabel={`opacity: ${o.value}`}
+                      />
+                    ))}
                   </div>
-                }
-                name={o.name}
-                subtitle={`opacity-${o.name}`}
-                specs={[
-                  { label: o.percentage },
-                  { label: o.value.toFixed(2) },
-                ]}
-                copyValue={`opacity: ${o.value};`}
-                copyLabel={`opacity: ${o.value}`}
-              />
-            ))}
-          </div>
-        </section>
+                </section>
+              ),
+            },
+            {
+              value: "guide",
+              label: "Guide",
+              content: (
+                <section>
+                  <SectionHeading description="How to read alpha previews on this page.">
+                    Reading the previews
+                  </SectionHeading>
+                  <div
+                    className={cn(
+                      brandDashboardCardRadius,
+                      "border border-dashed border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-5 text-[13px] leading-relaxed text-[var(--text-secondary)]",
+                    )}
+                  >
+                    <p>{HERO_DESC}</p>
+                    <p className="mt-3 text-[var(--text-tertiary)]">
+                      The checkerboard pattern stands in for arbitrary backgrounds so you can judge edge
+                      halos and anti-aliasing. Percentage labels map to the same numeric alpha your build
+                      tools use (0–1).
+                    </p>
+                  </div>
+                </section>
+              ),
+            },
+          ]}
+        />
       </div>
     </BrandTokenPageLayout>
   );

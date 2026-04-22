@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Layers2, Sun, Moon, ChevronDown } from "lucide-react";
+import { Layers2, ChevronDown } from "lucide-react";
 import { useBrandStore } from "@/stores/brand";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -11,56 +11,15 @@ import {
   TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
 import { SectionHeading } from "@/components/dashboard/section-heading";
+import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
 import { TokenCard } from "@/components/dashboard/token-card";
 import { cn } from "@/lib/utils";
-import type { BrandShadow } from "@/lib/brand/types";
+import type { BrandProfile, BrandShadow } from "@/lib/brand/types";
 
 const HERO_DESC =
   "Elevation tokens for cards, modals, and focus rings — toggle surface to preview shadow behavior on light or dark backgrounds.";
 
 type Surface = "light" | "dark";
-
-function SurfaceToggle({
-  value,
-  onChange,
-}: {
-  value: Surface;
-  onChange: (v: Surface) => void;
-}) {
-  return (
-    <div
-      role="tablist"
-      aria-label="Preview surface"
-      className="inline-flex items-center gap-0.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] p-0.5"
-    >
-      {([
-        { v: "light", label: "Light", Icon: Sun },
-        { v: "dark", label: "Dark", Icon: Moon },
-      ] as const).map(({ v, label, Icon }) => {
-        const active = value === v;
-        return (
-          <button
-            key={v}
-            role="tab"
-            aria-selected={active}
-            type="button"
-            onClick={() => onChange(v)}
-            className={cn(
-              "inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium",
-              "transition-colors duration-150 [transition-timing-function:var(--ease-standard)]",
-              active
-                ? "bg-[var(--bg-elevated)] text-[var(--text-primary)] shadow-[var(--shadow-xs)]"
-                : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]",
-            )}
-          >
-            <Icon size={12} strokeWidth={1.6} />
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 function ShadowPreview({
   shadow,
@@ -101,7 +60,9 @@ function LayerTable({ shadow }: { shadow: BrandShadow }) {
         )}
         style={{ fontFamily: "var(--font-geist-mono)" }}
       >
-        <span>{shadow.layers.length} layer{shadow.layers.length === 1 ? "" : "s"}</span>
+        <span>
+          {shadow.layers.length} layer{shadow.layers.length === 1 ? "" : "s"}
+        </span>
         <ChevronDown
           size={12}
           strokeWidth={1.6}
@@ -109,7 +70,10 @@ function LayerTable({ shadow }: { shadow: BrandShadow }) {
         />
       </summary>
       <div className="mt-1 overflow-hidden rounded-[8px] border border-[var(--border-subtle)]">
-        <table className="w-full border-collapse text-[10.5px]" style={{ fontFamily: "var(--font-geist-mono)" }}>
+        <table
+          className="w-full border-collapse text-[10.5px]"
+          style={{ fontFamily: "var(--font-geist-mono)" }}
+        >
           <thead>
             <tr className="bg-[var(--bg-secondary)] text-[var(--text-tertiary)]">
               {["x", "y", "blur", "spread", "color"].map((c) => (
@@ -145,6 +109,43 @@ function LayerTable({ shadow }: { shadow: BrandShadow }) {
         </table>
       </div>
     </details>
+  );
+}
+
+function ShadowsElevationPanel({
+  profile,
+  surface,
+}: {
+  profile: BrandProfile;
+  surface: Surface;
+}) {
+  return (
+    <section>
+      <SectionHeading description="Each card shows the shadow on the selected surface. Expand to inspect individual layers.">
+        Elevation
+      </SectionHeading>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {profile.shadows.map((shadow) => (
+          <TokenCard
+            key={shadow.name}
+            eyebrow={shadow.tailwindClass ?? shadow.name}
+            tag={shadow.isCustom ? "custom" : undefined}
+            previewHeight={140}
+            previewClassName="p-0 overflow-hidden"
+            preview={<ShadowPreview shadow={shadow} surface={surface} />}
+            name={shadow.name}
+            subtitle={shadow.tailwindClass}
+            specs={[
+              { label: `${shadow.layers.length || 1}L` },
+              { label: surface === "light" ? "light" : "dark" },
+            ]}
+            copyValue={shadow.value}
+            copyLabel={shadow.value}
+            footer={<LayerTable shadow={shadow} />}
+          />
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -188,40 +189,27 @@ export default function ShadowsPage() {
       }
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
-      <div className="space-y-8">
+      <div className="space-y-6">
         <TokenPageProvenanceLine>
           Auto-extracted from {source} · {profile.shadows.length} tokens
         </TokenPageProvenanceLine>
 
-        <section>
-          <SectionHeading
-            description="Each card shows the shadow on the selected surface. Expand to inspect individual layers."
-            action={<SurfaceToggle value={surface} onChange={setSurface} />}
-          >
-            Elevation
-          </SectionHeading>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {profile.shadows.map((shadow) => (
-              <TokenCard
-                key={shadow.name}
-                eyebrow={shadow.tailwindClass ?? shadow.name}
-                tag={shadow.isCustom ? "custom" : undefined}
-                previewHeight={140}
-                previewClassName="p-0 overflow-hidden"
-                preview={<ShadowPreview shadow={shadow} surface={surface} />}
-                name={shadow.name}
-                subtitle={shadow.tailwindClass}
-                specs={[
-                  { label: `${shadow.layers.length || 1}L` },
-                  { label: surface === "light" ? "light" : "dark" },
-                ]}
-                copyValue={shadow.value}
-                copyLabel={shadow.value}
-                footer={<LayerTable shadow={shadow} />}
-              />
-            ))}
-          </div>
-        </section>
+        <TokenPagePillTabs
+          value={surface}
+          onValueChange={(v) => setSurface(v as Surface)}
+          tabs={[
+            {
+              value: "light",
+              label: "Light",
+              content: <ShadowsElevationPanel profile={profile} surface="light" />,
+            },
+            {
+              value: "dark",
+              label: "Dark",
+              content: <ShadowsElevationPanel profile={profile} surface="dark" />,
+            },
+          ]}
+        />
       </div>
     </BrandTokenPageLayout>
   );

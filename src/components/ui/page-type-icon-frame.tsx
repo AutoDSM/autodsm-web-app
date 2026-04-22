@@ -7,7 +7,7 @@ export interface PageTypeIconFrameProps extends React.HTMLAttributes<HTMLDivElem
 }
 
 /**
- * Small boxed icon for page heroes (e.g. Typography “T” in the mockup).
+ * Small icon tile for page heroes — canvas fill, no hairline border (token pages).
  */
 export function PageTypeIconFrame({
   className,
@@ -17,7 +17,7 @@ export function PageTypeIconFrame({
   return (
     <div
       className={cn(
-        "flex size-10 shrink-0 items-center justify-center rounded-md border border-[var(--text-primary)] text-[var(--text-primary)]",
+        "flex size-10 shrink-0 items-center justify-center rounded-md border-0 bg-[var(--bg-canvas)] text-[var(--text-primary)]",
         className,
       )}
       aria-hidden

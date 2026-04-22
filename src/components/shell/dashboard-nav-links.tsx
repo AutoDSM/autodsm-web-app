@@ -6,18 +6,6 @@ import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import {
   LayoutDashboard,
-  Palette,
-  Type,
-  Image as ImageIcon,
-  Ruler,
-  Square,
-  CornerDownRight,
-  Minus,
-  Play,
-  Layers,
-  Droplets,
-  LayoutPanelTop,
-  MonitorSmartphone,
   Settings as SettingsIcon,
   Pen,
   ChevronDown,
@@ -26,21 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useBrandStore } from "@/stores/brand";
 import { SIDEBAR_SECTIONS, CATEGORY_LABELS } from "@/lib/brand/types";
-
-const ICONS: Record<string, LucideIcon> = {
-  colors: Palette,
-  typography: Type,
-  assets: ImageIcon,
-  spacing: Ruler,
-  shadows: Square,
-  radii: CornerDownRight,
-  borders: Minus,
-  animations: Play,
-  gradients: Layers,
-  opacity: Droplets,
-  zindex: LayoutPanelTop,
-  breakpoints: MonitorSmartphone,
-};
+import { DASHBOARD_CATEGORY_ICONS } from "@/lib/dashboard-category-icons";
 
 function SidebarNavIcon({
   icon: Icon,
@@ -185,7 +159,7 @@ export function DashboardNavLinks({
               {open ? (
                 <div className="flex flex-col gap-0">
                   {section.items.map((slug) => {
-                    const Icon = ICONS[slug];
+                    const Icon = DASHBOARD_CATEGORY_ICONS[slug] ?? LayoutDashboard;
                     const href = `/dashboard/${slug}`;
                     const hasTokens = profile
                       ? (() => {

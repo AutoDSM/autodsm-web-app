@@ -1,17 +1,15 @@
 "use client";
 
+/**
+ * cmdk primitives for command palettes. Dashboard “Jump to” uses `JumpToPalette`
+ * (`shell/jump-to-palette.tsx`) for its own dialog + search field styling.
+ */
+
 import * as React from "react";
 import { Command as CommandPrimitive } from "cmdk";
-import { Search } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { brandDashboardCardRadius } from "@/components/ui/brand-card-tokens";
 
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,
@@ -20,7 +18,8 @@ const Command = React.forwardRef<
   <CommandPrimitive
     ref={ref}
     className={cn(
-      "flex h-full w-full flex-col overflow-hidden rounded-xl bg-popover text-popover-foreground",
+      "flex h-full w-full flex-col overflow-hidden bg-[var(--bg-elevated)] text-[var(--text-primary)]",
+      brandDashboardCardRadius,
       className,
     )}
     {...props}
@@ -28,31 +27,16 @@ const Command = React.forwardRef<
 ));
 Command.displayName = CommandPrimitive.displayName ?? "Command";
 
-const CommandInput = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.Input>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
->(({ className, ...props }, ref) => (
-  <div className="flex items-center border-b border-border/40 px-3" cmdk-input-wrapper="">
-    <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" aria-hidden />
-    <CommandPrimitive.Input
-      ref={ref}
-      className={cn(
-        "flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
-        className,
-      )}
-      {...props}
-    />
-  </div>
-));
-CommandInput.displayName = CommandPrimitive.Input.displayName;
-
 const CommandList = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.List>
 >(({ className, ...props }, ref) => (
   <CommandPrimitive.List
     ref={ref}
-    className={cn("max-h-[min(50vh,320px)] overflow-y-auto overflow-x-hidden", className)}
+    className={cn(
+      "max-h-[min(50vh,340px)] overflow-y-auto overflow-x-hidden bg-[var(--bg-elevated)]",
+      className,
+    )}
     {...props}
   />
 ));
@@ -64,7 +48,7 @@ const CommandEmpty = React.forwardRef<
 >((props, ref) => (
   <CommandPrimitive.Empty
     ref={ref}
-    className="py-6 text-center text-sm text-muted-foreground"
+    className="py-8 text-center text-[13px] text-[var(--text-tertiary)]"
     {...props}
   />
 ));
@@ -77,7 +61,8 @@ const CommandGroup = React.forwardRef<
   <CommandPrimitive.Group
     ref={ref}
     className={cn(
-      "overflow-hidden p-1 text-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground",
+      "overflow-hidden p-1.5 text-[var(--text-primary)]",
+      "[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:tracking-widest [&_[cmdk-group-heading]]:text-[var(--text-tertiary)]",
       className,
     )}
     {...props}
@@ -91,7 +76,7 @@ const CommandSeparator = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive.Separator
     ref={ref}
-    className={cn("-mx-1 h-px bg-border", className)}
+    className={cn("-mx-1 h-px bg-[var(--border-subtle)]", className)}
     {...props}
   />
 ));
@@ -104,7 +89,13 @@ const CommandItem = React.forwardRef<
   <CommandPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-lg px-2 py-1.5 text-sm outline-none aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
+      "group relative flex cursor-pointer select-none items-center gap-3 rounded-md px-3 py-2.5 text-[13px] leading-snug outline-none",
+      "text-[var(--text-secondary)] transition-colors duration-150 [transition-timing-function:var(--ease-standard)]",
+      "hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]",
+      "active:bg-[var(--bg-tertiary)] active:text-[var(--text-primary)]",
+      "data-[selected=true]:bg-[var(--bg-secondary)] data-[selected=true]:text-[var(--text-primary)]",
+      "aria-selected:bg-[var(--bg-secondary)] aria-selected:text-[var(--text-primary)]",
+      "data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
       className,
     )}
     {...props}
@@ -118,43 +109,23 @@ function CommandShortcut({
 }: React.HTMLAttributes<HTMLSpanElement>) {
   return (
     <span
-      className={cn("ml-auto text-xs tracking-widest text-muted-foreground", className)}
+      className={cn(
+        "ml-auto shrink-0 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-1.5 py-0.5",
+        "font-mono text-[10px] font-medium tracking-wide text-[var(--text-tertiary)]",
+        "group-data-[selected=true]:border-[var(--border-default)] group-data-[selected=true]:bg-[var(--bg-elevated)] group-data-[selected=true]:text-[var(--text-secondary)]",
+        "group-aria-selected:border-[var(--border-default)] group-aria-selected:bg-[var(--bg-elevated)] group-aria-selected:text-[var(--text-secondary)]",
+        className,
+      )}
       {...props}
     />
   );
 }
 CommandShortcut.displayName = "CommandShortcut";
 
-function CommandDialog({
-  children,
-  title = "Command palette",
-  description = "Search for a command to run",
-  ...props
-}: React.ComponentProps<typeof Dialog> & {
-  title?: string;
-  description?: string;
-}) {
-  return (
-    <Dialog {...props}>
-      <DialogContent className="overflow-hidden rounded-xl border-0 p-0 shadow-[var(--shadow-lg)] sm:max-w-lg" showCloseButton={false}>
-        <DialogHeader className="sr-only">
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <Command className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
-          {children}
-        </Command>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 export {
   Command,
-  CommandDialog,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
   CommandSeparator,

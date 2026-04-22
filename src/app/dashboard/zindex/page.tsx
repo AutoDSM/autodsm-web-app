@@ -11,6 +11,7 @@ import {
   TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
 import { SectionHeading } from "@/components/dashboard/section-heading";
+import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
 import { TokenRow, TokenRowGroup } from "@/components/dashboard/token-row";
 import { brandTokenSurface } from "@/components/ui/brand-card-tokens";
 import { cn } from "@/lib/utils";
@@ -55,97 +56,111 @@ export default function ZIndexPage() {
       }
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
-      <div className="space-y-8">
+      <div className="space-y-6">
         <TokenPageProvenanceLine>
           Auto-extracted from {source} · {sorted.length} tokens
         </TokenPageProvenanceLine>
 
-        {/* Stacking visualization */}
-        <section>
-          <SectionHeading description="Layers are offset along both axes to preview their stacking order on a single surface.">
-            Stack
-          </SectionHeading>
-          <div
-            className={cn(
-              brandTokenSurface,
-              "relative h-[220px] overflow-hidden px-6 py-6",
-            )}
-          >
-            <div className="relative mx-auto h-full w-full max-w-[420px]">
-              {sorted.map((z, i) => {
-                const offset = i * 16;
-                return (
+        <TokenPagePillTabs
+          defaultValue="stack"
+          tabs={[
+            {
+              value: "stack",
+              label: "Stack",
+              content: (
+                <section>
+                  <SectionHeading description="Layers are offset along both axes to preview their stacking order on a single surface.">
+                    Stack
+                  </SectionHeading>
                   <div
-                    key={z.name + z.value}
-                    className="absolute flex h-[68px] w-[240px] items-center justify-between rounded-[10px] border border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 shadow-[var(--shadow-xs)]"
-                    style={{
-                      top: offset,
-                      left: offset,
-                      zIndex: z.value,
-                    }}
+                    className={cn(
+                      brandTokenSurface,
+                      "relative h-[220px] overflow-hidden px-6 py-6",
+                    )}
                   >
-                    <div className="min-w-0">
-                      <p className="truncate text-[13px] font-medium text-[var(--text-primary)]">
-                        {z.inferredRole ?? z.name}
-                      </p>
-                      <p
-                        className="truncate text-[11px] text-[var(--text-tertiary)]"
-                        style={{ fontFamily: "var(--font-geist-mono)" }}
-                      >
-                        {z.tailwindClass}
-                      </p>
+                    <div className="relative mx-auto h-full w-full max-w-[420px]">
+                      {sorted.map((z, i) => {
+                        const offset = i * 16;
+                        return (
+                          <div
+                            key={z.name + z.value}
+                            className="absolute flex h-[68px] w-[240px] items-center justify-between rounded-[10px] border border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 shadow-[var(--shadow-xs)]"
+                            style={{
+                              top: offset,
+                              left: offset,
+                              zIndex: z.value,
+                            }}
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-[13px] font-medium text-[var(--text-primary)]">
+                                {z.inferredRole ?? z.name}
+                              </p>
+                              <p
+                                className="truncate text-[11px] text-[var(--text-tertiary)]"
+                                style={{ fontFamily: "var(--font-geist-mono)" }}
+                              >
+                                {z.tailwindClass}
+                              </p>
+                            </div>
+                            <span
+                              className="shrink-0 rounded-full bg-[var(--bg-secondary)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-primary)]"
+                              style={{ fontFamily: "var(--font-geist-mono)" }}
+                            >
+                              {z.value}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <span
-                      className="shrink-0 rounded-full bg-[var(--bg-secondary)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-primary)]"
-                      style={{ fontFamily: "var(--font-geist-mono)" }}
-                    >
-                      {z.value}
-                    </span>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* Detail rows */}
-        <section>
-          <SectionHeading description="Full token list with numeric value, Tailwind class, and inferred role (when available).">
-            All tokens
-          </SectionHeading>
-          <TokenRowGroup>
-            {sorted.map((z) => (
-              <TokenRow
-                key={z.name + z.value}
-                preview={
-                  <div
-                    aria-hidden
-                    className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-[var(--bg-secondary)]"
-                  >
-                    <span
-                      className="text-[11px] font-medium text-[var(--text-primary)]"
-                      style={{ fontFamily: "var(--font-geist-mono)" }}
-                    >
-                      {z.value}
-                    </span>
-                  </div>
-                }
-                name={z.inferredRole ?? z.name}
-                subtitle={z.tailwindClass}
-                meta={
-                  <div className="space-y-0.5 text-[var(--text-primary)]">
-                    <div>z-index: {z.value}</div>
-                    {z.inferredRole ? (
-                      <div className="text-[var(--text-tertiary)]">{z.inferredRole}</div>
-                    ) : null}
-                  </div>
-                }
-                copyValue={`z-index: ${z.value};`}
-                copyLabel={`z-index: ${z.value}`}
-              />
-            ))}
-          </TokenRowGroup>
-        </section>
+                </section>
+              ),
+            },
+            {
+              value: "tokens",
+              label: "All tokens",
+              content: (
+                <section>
+                  <SectionHeading description="Full token list with numeric value, Tailwind class, and inferred role (when available).">
+                    All tokens
+                  </SectionHeading>
+                  <TokenRowGroup>
+                    {sorted.map((z) => (
+                      <TokenRow
+                        key={z.name + z.value}
+                        preview={
+                          <div
+                            aria-hidden
+                            className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-[var(--bg-secondary)]"
+                          >
+                            <span
+                              className="text-[11px] font-medium text-[var(--text-primary)]"
+                              style={{ fontFamily: "var(--font-geist-mono)" }}
+                            >
+                              {z.value}
+                            </span>
+                          </div>
+                        }
+                        name={z.inferredRole ?? z.name}
+                        subtitle={z.tailwindClass}
+                        meta={
+                          <div className="space-y-0.5 text-[var(--text-primary)]">
+                            <div>z-index: {z.value}</div>
+                            {z.inferredRole ? (
+                              <div className="text-[var(--text-tertiary)]">{z.inferredRole}</div>
+                            ) : null}
+                          </div>
+                        }
+                        copyValue={`z-index: ${z.value};`}
+                        copyLabel={`z-index: ${z.value}`}
+                      />
+                    ))}
+                  </TokenRowGroup>
+                </section>
+              ),
+            },
+          ]}
+        />
       </div>
     </BrandTokenPageLayout>
   );

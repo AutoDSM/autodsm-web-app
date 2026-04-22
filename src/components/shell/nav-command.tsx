@@ -1,37 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
-import {
-  LayoutDashboard,
-  Pen,
-  Settings,
-  Search,
-  Sparkles,
-  type LucideIcon,
-} from "lucide-react";
+import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-  CommandShortcut,
-} from "@/components/ui/command";
-import { CATEGORY_LABELS, SIDEBAR_SECTIONS } from "@/lib/brand/types";
+import { JumpToPalette } from "@/components/shell/jump-to-palette";
 import { cn } from "@/lib/utils";
 
-const QUICK: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/agent", label: "New agent", icon: Pen },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
-];
-
 export function NavCommand({ className }: { className?: string }) {
-  const router = useRouter();
   const [open, setOpen] = React.useState(false);
 
   React.useEffect(() => {
@@ -74,50 +49,7 @@ export function NavCommand({ className }: { className?: string }) {
         <Search className="size-3.5" strokeWidth={1.5} />
       </Button>
 
-      <CommandDialog open={open} onOpenChange={setOpen} title="Jump to" description="Search pages and token categories">
-        <CommandInput placeholder="Search pages…" />
-        <CommandList>
-          <CommandEmpty>No results.</CommandEmpty>
-          <CommandGroup heading="Quick">
-            {QUICK.map(({ href, label, icon: Icon }) => (
-              <CommandItem
-                key={href}
-                value={`${label} ${href}`}
-                onSelect={() => {
-                  router.push(href);
-                  setOpen(false);
-                }}
-              >
-                <Icon className="size-4 opacity-70" aria-hidden />
-                {label}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-          <CommandSeparator />
-          {SIDEBAR_SECTIONS.map((section) => (
-            <CommandGroup key={section.label} heading={section.label}>
-              {section.items.map((slug) => {
-                const href = `/dashboard/${slug}`;
-                const label = CATEGORY_LABELS[slug];
-                return (
-                  <CommandItem
-                    key={href}
-                    value={`${label} ${slug} ${href}`}
-                    onSelect={() => {
-                      router.push(href);
-                      setOpen(false);
-                    }}
-                  >
-                    <Sparkles className="size-4 opacity-50" />
-                    {label}
-                    <CommandShortcut className="font-mono text-[10px]">{slug}</CommandShortcut>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-          ))}
-        </CommandList>
-      </CommandDialog>
+      <JumpToPalette open={open} onOpenChange={setOpen} />
     </>
   );
 }

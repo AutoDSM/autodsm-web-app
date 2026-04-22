@@ -11,7 +11,10 @@ import {
   TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
 import { SectionHeading } from "@/components/dashboard/section-heading";
+import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
 import { TokenRow, TokenRowGroup } from "@/components/dashboard/token-row";
+import { brandDashboardCardRadius } from "@/components/ui/brand-card-tokens";
+import { cn } from "@/lib/utils";
 
 const HERO_DESC =
   "Border widths, styles, and colors used across your UI — tap any row to copy the full declaration.";
@@ -75,45 +78,84 @@ export default function BordersPage() {
       }
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
-      <div className="space-y-8">
+      <div className="space-y-6">
         <TokenPageProvenanceLine>
           Auto-extracted from {source} · {profile.borders.length} tokens
         </TokenPageProvenanceLine>
 
-        <section>
-          <SectionHeading description="Each row renders a live inline preview with the token's width, style, and color.">
-            All tokens
-          </SectionHeading>
-          <TokenRowGroup>
-            {profile.borders.map((b) => {
-              const css = borderValue(b);
-              return (
-                <TokenRow
-                  key={b.name + b.source}
-                  preview={
-                    <div
-                      aria-hidden
-                      className="h-10 w-10 rounded-[6px] bg-[var(--bg-elevated)]"
-                      style={{ border: css }}
-                    />
-                  }
-                  name={b.name}
-                  subtitle={b.colorToken ?? b.color}
-                  meta={
-                    <div className="space-y-0.5 text-[var(--text-primary)]">
-                      <div>
-                        {b.width} <span className="text-[var(--text-tertiary)]">·</span> {b.style}
-                      </div>
-                      <div className="text-[var(--text-tertiary)]">{b.color}</div>
-                    </div>
-                  }
-                  copyValue={`border: ${css};`}
-                  copyLabel={css}
-                />
-              );
-            })}
-          </TokenRowGroup>
-        </section>
+        <TokenPagePillTabs
+          defaultValue="overview"
+          tabs={[
+            {
+              value: "overview",
+              label: "Overview",
+              content: (
+                <section>
+                  <SectionHeading description="How border tokens are extracted and how to use this page.">
+                    Overview
+                  </SectionHeading>
+                  <div
+                    className={cn(
+                      brandDashboardCardRadius,
+                      "border border-dashed border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-5 text-[13px] leading-relaxed text-[var(--text-secondary)]",
+                    )}
+                  >
+                    <p>{HERO_DESC}</p>
+                    <p className="mt-3 text-[var(--text-tertiary)]">
+                      Use the <span className="font-medium text-[var(--text-secondary)]">Tokens</span>{" "}
+                      tab to browse every declaration. Each row copies a ready-to-paste{" "}
+                      <code className="rounded bg-[var(--bg-tertiary)] px-1 py-0.5 font-mono text-[12px] text-[var(--text-primary)]">
+                        border: …
+                      </code>{" "}
+                      block.
+                    </p>
+                  </div>
+                </section>
+              ),
+            },
+            {
+              value: "tokens",
+              label: "Tokens",
+              content: (
+                <section>
+                  <SectionHeading description="Each row renders a live inline preview with the token's width, style, and color.">
+                    All tokens
+                  </SectionHeading>
+                  <TokenRowGroup>
+                    {profile.borders.map((b) => {
+                      const css = borderValue(b);
+                      return (
+                        <TokenRow
+                          key={b.name + b.source}
+                          preview={
+                            <div
+                              aria-hidden
+                              className="h-10 w-10 rounded-[6px] bg-[var(--bg-elevated)]"
+                              style={{ border: css }}
+                            />
+                          }
+                          name={b.name}
+                          subtitle={b.colorToken ?? b.color}
+                          meta={
+                            <div className="space-y-0.5 text-[var(--text-primary)]">
+                              <div>
+                                {b.width}{" "}
+                                <span className="text-[var(--text-tertiary)]">·</span> {b.style}
+                              </div>
+                              <div className="text-[var(--text-tertiary)]">{b.color}</div>
+                            </div>
+                          }
+                          copyValue={`border: ${css};`}
+                          copyLabel={css}
+                        />
+                      );
+                    })}
+                  </TokenRowGroup>
+                </section>
+              ),
+            },
+          ]}
+        />
       </div>
     </BrandTokenPageLayout>
   );

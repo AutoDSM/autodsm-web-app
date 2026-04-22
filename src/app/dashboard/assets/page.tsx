@@ -11,6 +11,7 @@ import {
   TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
 import { SectionHeading } from "@/components/dashboard/section-heading";
+import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
 import { TokenCard } from "@/components/dashboard/token-card";
 import { cn } from "@/lib/utils";
 import type { BrandAsset } from "@/lib/brand/types";
@@ -138,6 +139,8 @@ export default function AssetsPage() {
     byCategory.set(a.category, arr);
   }
 
+  const categories = CATEGORY_ORDER.filter((c) => byCategory.has(c));
+
   return (
     <BrandTokenPageLayout
       hero={
@@ -149,62 +152,69 @@ export default function AssetsPage() {
       }
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
-      <div className="space-y-8">
+      <div className="space-y-6">
         <TokenPageProvenanceLine>
           {profile.assets.length} assets · scanned from {profile.meta.filesScanned} files
         </TokenPageProvenanceLine>
 
-        {CATEGORY_ORDER.filter((c) => byCategory.has(c)).map((cat, idx) => {
-          const items = byCategory.get(cat) ?? [];
-          return (
-            <section key={cat}>
-              <SectionHeading
-                description={`${items.length} ${items.length === 1 ? "asset" : "assets"} in this category.`}
-                action={idx === 0 ? <SurfaceToggle value={surface} onChange={setSurface} /> : undefined}
-              >
-                {CATEGORY_LABELS[cat]}
-              </SectionHeading>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {items.map((asset) => {
-                  const specs = [
-                    { label: asset.type.toUpperCase() },
-                    ...(asset.dimensions
-                      ? [{ label: `${asset.dimensions.width}×${asset.dimensions.height}` }]
-                      : []),
-                    { label: asset.fileSizeFormatted },
-                  ];
-                  const alpha = asset.hasTransparency;
-                  return (
-                    <TokenCard
-                      key={asset.path}
-                      eyebrow={cat.toUpperCase()}
-                      tag={alpha ? "α" : undefined}
-                      previewHeight={160}
-                      previewClassName="p-0 overflow-hidden"
-                      preview={
-                        <div
-                          className="flex h-full w-full items-center justify-center"
-                          style={
-                            surface === "transparent"
-                              ? { background: CHECKERBOARD }
-                              : undefined
+        <TokenPagePillTabs
+          defaultValue={categories[0]}
+          tabs={categories.map((cat) => {
+            const items = byCategory.get(cat) ?? [];
+            return {
+              value: cat,
+              label: CATEGORY_LABELS[cat],
+              content: (
+                <section>
+                  <SectionHeading
+                    description={`${items.length} ${items.length === 1 ? "asset" : "assets"} in this category.`}
+                    action={<SurfaceToggle value={surface} onChange={setSurface} />}
+                  >
+                    {CATEGORY_LABELS[cat]}
+                  </SectionHeading>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    {items.map((asset) => {
+                      const specs = [
+                        { label: asset.type.toUpperCase() },
+                        ...(asset.dimensions
+                          ? [{ label: `${asset.dimensions.width}×${asset.dimensions.height}` }]
+                          : []),
+                        { label: asset.fileSizeFormatted },
+                      ];
+                      const alpha = asset.hasTransparency;
+                      return (
+                        <TokenCard
+                          key={asset.path}
+                          eyebrow={cat.toUpperCase()}
+                          tag={alpha ? "α" : undefined}
+                          previewHeight={160}
+                          previewClassName="p-0 overflow-hidden"
+                          preview={
+                            <div
+                              className="flex h-full w-full items-center justify-center"
+                              style={
+                                surface === "transparent"
+                                  ? { background: CHECKERBOARD }
+                                  : undefined
+                              }
+                            >
+                              <AssetPreview asset={asset} />
+                            </div>
                           }
-                        >
-                          <AssetPreview asset={asset} />
-                        </div>
-                      }
-                      name={asset.name}
-                      subtitle={asset.path}
-                      specs={specs}
-                      copyValue={asset.path}
-                      copyLabel={asset.path}
-                    />
-                  );
-                })}
-              </div>
-            </section>
-          );
-        })}
+                          name={asset.name}
+                          subtitle={asset.path}
+                          specs={specs}
+                          copyValue={asset.path}
+                          copyLabel={asset.path}
+                        />
+                      );
+                    })}
+                  </div>
+                </section>
+              ),
+            };
+          })}
+        />
       </div>
     </BrandTokenPageLayout>
   );
