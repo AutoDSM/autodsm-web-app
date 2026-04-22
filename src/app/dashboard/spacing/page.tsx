@@ -4,7 +4,6 @@ import * as React from "react";
 import { UnfoldVertical } from "lucide-react";
 import { useBrandStore } from "@/stores/brand";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   BrandTokenPageHero,
@@ -12,12 +11,13 @@ import {
   LastUpdatedLabel,
   TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
-import { brandTokenSurface } from "@/components/ui/brand-card-tokens";
-import { cn } from "@/lib/utils";
+import { SectionHeading } from "@/components/dashboard/section-heading";
+import { TokenRow, TokenRowGroup } from "@/components/dashboard/token-row";
+import { TokenCard } from "@/components/dashboard/token-card";
 import type { BrandSpacing } from "@/lib/brand/types";
 
 const HERO_DESC =
-  "The spacing scale used for padding, margin, and gaps—extracted from your repository.";
+  "Padding, margin, and gap values extracted from your repository — tap any row to copy the CSS value.";
 
 export default function SpacingPage() {
   const profile = useBrandStore((s) => s.profile);
@@ -45,22 +45,17 @@ export default function SpacingPage() {
   }
 
   const source =
-    profile.meta.cssSource ||
-    profile.meta.tailwindConfigPath ||
-    "repo";
+    profile.meta.cssSource || profile.meta.tailwindConfigPath || "repo";
 
   const sorted = [...profile.spacing].sort((a, b) => a.px - b.px);
   const maxPx = Math.max(...sorted.map((s) => s.px), 1);
 
-  // Build a quick lookup map by name
+  // Lookup map by name
   const spacingMap: Record<string, BrandSpacing> = {};
-  for (const s of profile.spacing) {
-    spacingMap[s.name] = s;
-  }
-
-  // Get the 4th smallest for p-4 approximation, or the name '4'
+  for (const s of profile.spacing) spacingMap[s.name] = s;
   const sp4 = spacingMap["4"] ?? sorted[Math.min(3, sorted.length - 1)];
   const sp2 = spacingMap["2"] ?? sorted[Math.min(1, sorted.length - 1)];
+  const sp6 = spacingMap["6"] ?? spacingMap["5"] ?? sp4;
 
   return (
     <BrandTokenPageLayout
@@ -75,160 +70,166 @@ export default function SpacingPage() {
       }
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
-      <div className="space-y-6">
-        <TokenPageProvenanceLine>Auto-extracted from {source}</TokenPageProvenanceLine>
+      <div className="space-y-8">
+        <TokenPageProvenanceLine>
+          Auto-extracted from {source} · {sorted.length} tokens
+        </TokenPageProvenanceLine>
 
-        <div className="space-y-10">
-      {/* ── Section 1: Spacing Ladder ── */}
-      <div>
-        <h2 className="text-h2 text-[var(--text-primary)] mb-6">
-          Spacing Scale
-        </h2>
-        <div
-          className={cn(
-            brandTokenSurface,
-            "divide-y divide-[var(--border-subtle)] overflow-hidden border border-[var(--border-subtle)]",
-          )}
-        >
-          {sorted.map((s) => (
-            <div
-              key={s.name}
-              className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-6"
-            >
-              {/* Left: spec */}
-              <div className="w-full min-w-0 shrink-0 sm:w-[140px]">
+        {/* ── Scale ladder ── */}
+        <section>
+          <SectionHeading description="Ordered from smallest to largest. Bar length is proportional to the raw pixel value.">
+            Scale
+          </SectionHeading>
+          <TokenRowGroup>
+            {sorted.map((s) => (
+              <TokenRow
+                key={s.name}
+                preview={
+                  <div
+                    aria-hidden
+                    className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-[var(--bg-secondary)]"
+                  >
+                    <span
+                      className="block h-1 rounded-full bg-[var(--accent)]"
+                      style={{
+                        width: `${Math.max(3, (s.px / maxPx) * 36)}px`,
+                      }}
+                    />
+                  </div>
+                }
+                name={s.name}
+                subtitle={s.tailwindClass}
+                meta={
+                  <div className="space-y-0.5 text-[var(--text-primary)]">
+                    <div>{s.rem}</div>
+                    <div className="text-[var(--text-tertiary)]">{s.px}px</div>
+                  </div>
+                }
+                copyValue={s.rem}
+                copyLabel={s.rem}
+                trailingBadge={
+                  s.isCustom ? (
+                    <Badge variant="accent" className="h-4 px-1.5 text-[9.5px]">
+                      custom
+                    </Badge>
+                  ) : null
+                }
+              />
+            ))}
+          </TokenRowGroup>
+        </section>
+
+        {/* ── Applied examples ── */}
+        <section>
+          <SectionHeading description="Live previews bound to your tokens — useful for verifying rhythm on real components.">
+            Applied examples
+          </SectionHeading>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <TokenCard
+              eyebrow="Padding"
+              tag="p-4"
+              previewHeight={140}
+              preview={
                 <div
-                  className="text-[var(--text-primary)]"
+                  className="flex items-center justify-center rounded-[10px] border border-dashed border-[var(--accent)]/40 bg-[var(--accent-subtle)]/60"
+                  style={{ padding: sp4?.rem ?? "1rem" }}
+                >
+                  <div className="rounded-[6px] bg-[var(--accent)] px-3 py-1.5 text-[12px] font-medium text-white">
+                    Content
+                  </div>
+                </div>
+              }
+              name={`padding: ${sp4?.name ?? "4"}`}
+              subtitle={`p-${sp4?.name ?? "4"}`}
+              specs={[
+                { label: sp4?.rem ?? "1rem" },
+                { label: `${sp4?.px ?? 16}px` },
+              ]}
+              copyValue={`padding: ${sp4?.rem ?? "1rem"};`}
+              copyLabel={`padding: ${sp4?.rem ?? "1rem"}`}
+            />
+
+            <TokenCard
+              eyebrow="Stack gap"
+              tag={`gap-${sp4?.name ?? "4"}`}
+              previewHeight={140}
+              preview={
+                <div
+                  className="flex flex-col"
+                  style={{ gap: sp4?.rem ?? "1rem" }}
+                >
+                  {["Alpha", "Beta", "Gamma"].map((label) => (
+                    <div
+                      key={label}
+                      className="rounded-[6px] border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-1 text-[11.5px] text-[var(--text-secondary)]"
+                    >
+                      {label}
+                    </div>
+                  ))}
+                </div>
+              }
+              name={`column gap: ${sp4?.name ?? "4"}`}
+              subtitle={`gap-${sp4?.name ?? "4"}`}
+              specs={[
+                { label: sp4?.rem ?? "1rem" },
+                { label: `${sp4?.px ?? 16}px` },
+              ]}
+              copyValue={`gap: ${sp4?.rem ?? "1rem"};`}
+              copyLabel={`gap: ${sp4?.rem ?? "1rem"}`}
+            />
+
+            <TokenCard
+              eyebrow="Button"
+              tag={`px-${sp4?.name ?? "4"} py-${sp2?.name ?? "2"}`}
+              previewHeight={140}
+              preview={
+                <button
+                  type="button"
+                  className="rounded-[8px] bg-[var(--accent)] text-[13px] font-medium text-white shadow-[var(--shadow-xs)]"
                   style={{
-                    fontFamily: "var(--font-geist-sans)",
-                    fontSize: 13,
-                    fontWeight: 500,
+                    paddingInline: sp4?.rem ?? "1rem",
+                    paddingBlock: sp2?.rem ?? "0.5rem",
                   }}
                 >
-                  {s.name}
+                  Continue
+                </button>
+              }
+              name={`button padding`}
+              subtitle={`px-${sp4?.name ?? "4"} py-${sp2?.name ?? "2"}`}
+              specs={[
+                { label: `x ${sp4?.rem ?? "1rem"}` },
+                { label: `y ${sp2?.rem ?? "0.5rem"}` },
+              ]}
+              copyValue={`padding: ${sp2?.rem ?? "0.5rem"} ${sp4?.rem ?? "1rem"};`}
+              copyLabel={`${sp2?.rem ?? "0.5rem"} / ${sp4?.rem ?? "1rem"}`}
+            />
+
+            <TokenCard
+              eyebrow="Section"
+              tag={`py-${sp6?.name ?? "6"}`}
+              previewHeight={140}
+              preview={
+                <div className="flex w-full flex-col items-center justify-center px-4">
+                  <div
+                    className="flex w-full flex-col items-center justify-center rounded-[10px] bg-[var(--bg-secondary)]"
+                    style={{ paddingBlock: sp6?.rem ?? "1.5rem" }}
+                  >
+                    <div className="h-1.5 w-24 rounded-full bg-[var(--border-default)]" />
+                    <div className="mt-2 h-1.5 w-16 rounded-full bg-[var(--border-subtle)]" />
+                  </div>
                 </div>
-                <div
-                  className="text-[var(--text-tertiary)]"
-                  style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11 }}
-                >
-                  {s.tailwindClass}
-                </div>
-                <div
-                  className="text-[var(--text-tertiary)]"
-                  style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11 }}
-                >
-                  {s.px}px · {s.rem}
-                </div>
-              </div>
-
-              {/* Right: bar */}
-              <div className="flex-1 relative flex items-center">
-                <div
-                  className="h-6 rounded-md bg-[var(--accent)]"
-                  style={{
-                    width: `${(s.px / maxPx) * 80}%`,
-                    minWidth: s.px > 0 ? 4 : 0,
-                    opacity: 0.8,
-                  }}
-                />
-                {s.isCustom && (
-                  <Badge variant="accent" className="ml-3 text-[10px]">
-                    custom
-                  </Badge>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Section 2: Applied Examples ── */}
-      <div>
-        <h2 className="text-h2 text-[var(--text-primary)] mb-6">
-          Applied Examples
-        </h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {/* Box A: padding demo */}
-          <div className={cn(brandTokenSurface, "p-6")}>
-            <div
-              className="text-[var(--text-tertiary)] mb-3"
-              style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11 }}
-            >
-              p-{sp4?.name ?? "4"} · padding
-            </div>
-            <div
-              className="bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg text-[var(--text-secondary)] text-body-s"
-              style={{ padding: sp4?.rem ?? "1rem" }}
-            >
-              Content inside p-{sp4?.name ?? "4"}
-            </div>
-            <div
-              className="text-[var(--text-tertiary)] mt-2"
-              style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11 }}
-            >
-              {sp4?.rem ?? "1rem"} = {sp4?.px ?? 16}px
-            </div>
+              }
+              name={`section padding`}
+              subtitle={`py-${sp6?.name ?? "6"}`}
+              specs={[
+                { label: sp6?.rem ?? "1.5rem" },
+                { label: `${sp6?.px ?? 24}px` },
+              ]}
+              copyValue={`padding-block: ${sp6?.rem ?? "1.5rem"};`}
+              copyLabel={`py ${sp6?.rem ?? "1.5rem"}`}
+            />
           </div>
-
-          {/* Box B: gap demo */}
-          <div className={cn(brandTokenSurface, "p-6")}>
-            <div
-              className="text-[var(--text-tertiary)] mb-3"
-              style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11 }}
-            >
-              gap-{sp4?.name ?? "4"} · vertical stack
-            </div>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: sp4?.rem ?? "1rem",
-              }}
-            >
-              {["Chip A", "Chip B", "Chip C"].map((label) => (
-                <Badge key={label} variant="outline">
-                  {label}
-                </Badge>
-              ))}
-            </div>
-            <div
-              className="text-[var(--text-tertiary)] mt-2"
-              style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11 }}
-            >
-              gap: {sp4?.rem ?? "1rem"}
-            </div>
-          </div>
-
-          {/* Box C: button padding demo */}
-          <div className={cn(brandTokenSurface, "p-6")}>
-            <div
-              className="text-[var(--text-tertiary)] mb-3"
-              style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11 }}
-            >
-              px-{sp4?.name ?? "4"} py-{sp2?.name ?? "2"} · button
-            </div>
-            <Button
-              variant="secondary"
-              size="md"
-              style={{
-                paddingLeft: sp4?.rem ?? "1rem",
-                paddingRight: sp4?.rem ?? "1rem",
-                paddingTop: sp2?.rem ?? "0.5rem",
-                paddingBottom: sp2?.rem ?? "0.5rem",
-              }}
-            >
-              px-{sp4?.name ?? "4"} py-{sp2?.name ?? "2"}
-            </Button>
-            <div
-              className="text-[var(--text-tertiary)] mt-2"
-              style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11 }}
-            >
-              {sp4?.rem ?? "1rem"} / {sp2?.rem ?? "0.5rem"}
-            </div>
-          </div>
-        </div>
-      </div>
-        </div>
+        </section>
       </div>
     </BrandTokenPageLayout>
   );

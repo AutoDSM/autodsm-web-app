@@ -3,7 +3,6 @@
 import * as React from "react";
 import { Droplets } from "lucide-react";
 import { useBrandStore } from "@/stores/brand";
-import { CopyButton } from "@/components/ui/copy-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   BrandTokenPageHero,
@@ -11,8 +10,8 @@ import {
   LastUpdatedLabel,
   TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
-import { brandTokenSurface } from "@/components/ui/brand-card-tokens";
-import { cn } from "@/lib/utils";
+import { SectionHeading } from "@/components/dashboard/section-heading";
+import { TokenCard } from "@/components/dashboard/token-card";
 
 const CHECKERBOARD = `repeating-conic-gradient(
   var(--border-subtle) 0% 25%,
@@ -20,7 +19,7 @@ const CHECKERBOARD = `repeating-conic-gradient(
 ) 50% / 12px 12px`;
 
 const HERO_DESC =
-  "Opacity scale used across your UI. Previews on a checkerboard to reveal transparency.";
+  "Opacity steps from your theme — previewed on a checkerboard so transparency is legible on either theme.";
 
 export default function OpacityPage() {
   const profile = useBrandStore((s) => s.profile);
@@ -31,10 +30,8 @@ export default function OpacityPage() {
         hero={
           <BrandTokenPageHero
             title="Opacity"
-            description="Opacity scale values from your theme."
-            icon={
-              <Droplets size={20} strokeWidth={1.75} className="shrink-0" aria-hidden />
-            }
+            description={HERO_DESC}
+            icon={<Droplets size={20} strokeWidth={1.75} className="shrink-0" aria-hidden />}
           />
         }
         metaRight={profile?.scannedAt ? <LastUpdatedLabel scannedAt={profile.scannedAt} /> : undefined}
@@ -48,7 +45,7 @@ export default function OpacityPage() {
   }
 
   const sorted = [...profile.opacity].sort((a, b) => a.value - b.value);
-  const source = profile.meta.tailwindConfigPath || profile.meta.cssSource || "repo";
+  const source = profile.meta.cssSource || profile.meta.tailwindConfigPath || "repo";
 
   return (
     <BrandTokenPageLayout
@@ -61,55 +58,46 @@ export default function OpacityPage() {
       }
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
-      <div className="space-y-6">
-        <TokenPageProvenanceLine>Auto-extracted from {source}</TokenPageProvenanceLine>
+      <div className="space-y-8">
+        <TokenPageProvenanceLine>
+          Auto-extracted from {source} · {sorted.length} tokens
+        </TokenPageProvenanceLine>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {sorted.map((op) => {
-          const className = `opacity-${op.name}`;
-          return (
-            <div
-              key={op.name}
-              className={cn(brandTokenSurface, "overflow-hidden")}
-            >
-              <div
-                className="relative h-24"
-                style={{ background: CHECKERBOARD }}
-              >
-                <div
-                  className="absolute inset-0 bg-[var(--accent)]"
-                  style={{ opacity: op.value }}
-                />
-              </div>
-              <div className="p-3">
-                <div className="flex items-baseline justify-between gap-2">
+        <section>
+          <SectionHeading description="Ordered low to high. Tiles use the accent color against a checkerboard so alpha is visible.">
+            Scale
+          </SectionHeading>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {sorted.map((o) => (
+              <TokenCard
+                key={o.name + o.value}
+                eyebrow="OPACITY"
+                tag={o.isCustom ? "custom" : undefined}
+                previewHeight={140}
+                previewClassName="p-0 overflow-hidden"
+                preview={
                   <div
-                    className="font-medium text-[var(--text-primary)]"
-                    style={{ fontFamily: "var(--font-geist-sans)", fontSize: 13 }}
+                    className="flex h-full w-full items-center justify-center"
+                    style={{ background: CHECKERBOARD }}
                   >
-                    {op.name}
+                    <div
+                      className="h-16 w-28 rounded-[10px] bg-[var(--accent)]"
+                      style={{ opacity: o.value }}
+                    />
                   </div>
-                  <div
-                    className="text-[var(--text-tertiary)]"
-                    style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11 }}
-                  >
-                    {op.percentage}
-                  </div>
-                </div>
-                <div className="mt-2 flex items-center gap-1">
-                  <span
-                    className="flex-1 truncate text-[var(--text-tertiary)]"
-                    style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11 }}
-                  >
-                    {className}
-                  </span>
-                  <CopyButton value={className} iconSize={12} />
-                </div>
-              </div>
-            </div>
-          );
-        })}
-        </div>
+                }
+                name={o.name}
+                subtitle={`opacity-${o.name}`}
+                specs={[
+                  { label: o.percentage },
+                  { label: o.value.toFixed(2) },
+                ]}
+                copyValue={`opacity: ${o.value};`}
+                copyLabel={`opacity: ${o.value}`}
+              />
+            ))}
+          </div>
+        </section>
       </div>
     </BrandTokenPageLayout>
   );

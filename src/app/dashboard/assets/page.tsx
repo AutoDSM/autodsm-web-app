@@ -1,9 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Image as ImageIcon, Images } from "lucide-react";
+import { Image as ImageIcon, Images, Sun, Palette } from "lucide-react";
 import { useBrandStore } from "@/stores/brand";
-import { CopyButton } from "@/components/ui/copy-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   BrandTokenPageHero,
@@ -11,7 +10,8 @@ import {
   LastUpdatedLabel,
   TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
-import { brandTokenSurface } from "@/components/ui/brand-card-tokens";
+import { SectionHeading } from "@/components/dashboard/section-heading";
+import { TokenCard } from "@/components/dashboard/token-card";
 import { cn } from "@/lib/utils";
 import type { BrandAsset } from "@/lib/brand/types";
 
@@ -34,11 +34,60 @@ const CATEGORY_LABELS: Record<BrandAsset["category"], string> = {
 const HERO_DESC =
   "Logos, icons, illustrations, and raster assets discovered across your repository.";
 
+const CHECKERBOARD = `repeating-conic-gradient(
+  var(--border-subtle) 0% 25%,
+  transparent 0% 50%
+) 50% / 12px 12px`;
+
+type Surface = "paper" | "transparent";
+
+function SurfaceToggle({
+  value,
+  onChange,
+}: {
+  value: Surface;
+  onChange: (v: Surface) => void;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label="Preview surface"
+      className="inline-flex items-center gap-0.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] p-0.5"
+    >
+      {([
+        { v: "paper", label: "Surface", Icon: Sun },
+        { v: "transparent", label: "Transparent", Icon: Palette },
+      ] as const).map(({ v, label, Icon }) => {
+        const active = value === v;
+        return (
+          <button
+            key={v}
+            role="tab"
+            aria-selected={active}
+            type="button"
+            onClick={() => onChange(v)}
+            className={cn(
+              "inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium",
+              "transition-colors duration-150 [transition-timing-function:var(--ease-standard)]",
+              active
+                ? "bg-[var(--bg-elevated)] text-[var(--text-primary)] shadow-[var(--shadow-xs)]"
+                : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]",
+            )}
+          >
+            <Icon size={12} strokeWidth={1.6} />
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function AssetPreview({ asset }: { asset: BrandAsset }) {
   if (asset.type === "svg" && asset.content) {
     return (
       <div
-        className="flex h-full w-full items-center justify-center p-4"
+        className="flex h-full w-full items-center justify-center p-4 [&_svg]:max-h-full [&_svg]:max-w-full"
         dangerouslySetInnerHTML={{ __html: asset.content }}
       />
     );
@@ -49,21 +98,18 @@ function AssetPreview({ asset }: { asset: BrandAsset }) {
       <img
         src={asset.storageUrl}
         alt={asset.name}
-        className="max-h-full max-w-full object-contain"
+        className="max-h-full max-w-full object-contain p-4"
       />
     );
   }
   return (
-    <ImageIcon
-      size={32}
-      strokeWidth={1.5}
-      className="text-[var(--text-tertiary)]"
-    />
+    <ImageIcon size={32} strokeWidth={1.5} className="text-[var(--text-tertiary)]" />
   );
 }
 
 export default function AssetsPage() {
   const profile = useBrandStore((s) => s.profile);
+  const [surface, setSurface] = React.useState<Surface>("paper");
 
   if (!profile || profile.assets.length === 0) {
     return (
@@ -103,74 +149,62 @@ export default function AssetsPage() {
       }
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
-      <div className="space-y-6">
+      <div className="space-y-8">
         <TokenPageProvenanceLine>
           {profile.assets.length} assets · scanned from {profile.meta.filesScanned} files
         </TokenPageProvenanceLine>
 
-        <div className="space-y-12">
-          {CATEGORY_ORDER.filter((c) => byCategory.has(c)).map((cat) => {
-            const items = byCategory.get(cat) ?? [];
-            return (
-              <section key={cat}>
-                <div className="mb-4 flex items-baseline justify-between">
-                  <h2 className="text-h3 text-[var(--text-primary)]">
-                    {CATEGORY_LABELS[cat]}
-                  </h2>
-                  <span
-                    className="text-[var(--text-tertiary)]"
-                    style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11 }}
-                  >
-                    {items.length}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {items.map((asset) => (
-                    <div
+        {CATEGORY_ORDER.filter((c) => byCategory.has(c)).map((cat, idx) => {
+          const items = byCategory.get(cat) ?? [];
+          return (
+            <section key={cat}>
+              <SectionHeading
+                description={`${items.length} ${items.length === 1 ? "asset" : "assets"} in this category.`}
+                action={idx === 0 ? <SurfaceToggle value={surface} onChange={setSurface} /> : undefined}
+              >
+                {CATEGORY_LABELS[cat]}
+              </SectionHeading>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {items.map((asset) => {
+                  const specs = [
+                    { label: asset.type.toUpperCase() },
+                    ...(asset.dimensions
+                      ? [{ label: `${asset.dimensions.width}×${asset.dimensions.height}` }]
+                      : []),
+                    { label: asset.fileSizeFormatted },
+                  ];
+                  const alpha = asset.hasTransparency;
+                  return (
+                    <TokenCard
                       key={asset.path}
-                      className={cn(brandTokenSurface, "overflow-hidden")}
-                    >
-                      <div className="flex h-36 items-center justify-center bg-[var(--bg-primary)]">
-                        <AssetPreview asset={asset} />
-                      </div>
-                      <div className="p-3">
+                      eyebrow={cat.toUpperCase()}
+                      tag={alpha ? "α" : undefined}
+                      previewHeight={160}
+                      previewClassName="p-0 overflow-hidden"
+                      preview={
                         <div
-                          className="truncate text-[var(--text-primary)]"
-                          style={{ fontFamily: "var(--font-geist-sans)", fontSize: 13 }}
-                          title={asset.name}
+                          className="flex h-full w-full items-center justify-center"
+                          style={
+                            surface === "transparent"
+                              ? { background: CHECKERBOARD }
+                              : undefined
+                          }
                         >
-                          {asset.name}
+                          <AssetPreview asset={asset} />
                         </div>
-                        <div
-                          className="mt-0.5 flex items-center gap-2 text-[var(--text-tertiary)]"
-                          style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11 }}
-                        >
-                          <span className="uppercase">{asset.type}</span>
-                          {asset.dimensions && (
-                            <span>
-                              {asset.dimensions.width}×{asset.dimensions.height}
-                            </span>
-                          )}
-                          <span>{asset.fileSizeFormatted}</span>
-                        </div>
-                        <div className="mt-2 flex items-center gap-1">
-                          <span
-                            className="flex-1 truncate text-[var(--text-tertiary)]"
-                            style={{ fontFamily: "var(--font-geist-mono)", fontSize: 11 }}
-                            title={asset.path}
-                          >
-                            {asset.path}
-                          </span>
-                          <CopyButton value={asset.path} iconSize={12} />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-        </div>
+                      }
+                      name={asset.name}
+                      subtitle={asset.path}
+                      specs={specs}
+                      copyValue={asset.path}
+                      copyLabel={asset.path}
+                    />
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
       </div>
     </BrandTokenPageLayout>
   );
