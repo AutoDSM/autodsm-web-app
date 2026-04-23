@@ -91,11 +91,6 @@ function accentStop(hex: string, mode: "light" | "dark", role: "hover" | "presse
   return adjustLightness(hex, d);
 }
 
-/** 8% project chroma on the page background (used by cards / elevated / popover in tint scope). */
-function elevatedFromBg(): string {
-  return "color-mix(in oklch, var(--project-tint) 8%, var(--bg-primary) 92%)";
-}
-
 function accentSubtleString(mode: "light" | "dark"): string {
   if (mode === "light") {
     return "color-mix(in oklch, var(--project-tint) 10%, #ffffff 90%)";
@@ -114,7 +109,6 @@ export function buildProjectTintStyle(
   const hover = accentStop(accent, mode, "hover");
   const pressed = accentStop(accent, mode, "pressed");
   const subtle = accentSubtleString(mode);
-  const elevated = elevatedFromBg();
   const focusRing = "0 0 0 2px var(--bg-primary), 0 0 0 4px var(--accent)";
 
   return {
@@ -126,9 +120,6 @@ export function buildProjectTintStyle(
     "--accent-hover": hover,
     "--accent-pressed": pressed,
     "--accent-subtle": subtle,
-    "--bg-elevated": elevated,
-    "--card": elevated,
-    "--popover": elevated,
     "--purple-500": accent,
     "--purple-400": hover,
     "--purple-600": pressed,

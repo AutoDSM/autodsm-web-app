@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import { useTheme } from "next-themes";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useBrandStore } from "@/stores/brand";
 import { brandTokenSurfaceBordered } from "@/components/ui/brand-card-tokens";
 import { dashboardMainContentClassName } from "@/lib/dashboard-content-layout";
@@ -9,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CopyButton } from "@/components/ui/copy-button";
+import { createClient } from "@/lib/supabase/client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +23,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { normalizeRepoInput } from "@/lib/utils";
 
 // ── card wrapper ──────────────────────────────────────────────────────────────
 
@@ -67,7 +80,21 @@ function SettingsCard({
 export default function SettingsPage() {
   const profile = useBrandStore((s) => s.profile);
   const { theme, setTheme } = useTheme();
+  const router = useRouter();
   const [publicVisible, setPublicVisible] = React.useState(false);
+  const [userEmail, setUserEmail] = React.useState<string>("");
+  const [displayName, setDisplayName] = React.useState("");
+  const [personalWebsite, setPersonalWebsite] = React.useState("");
+  const [companyName, setCompanyName] = React.useState("");
+  const [companyWebsite, setCompanyWebsite] = React.useState("");
+  const [accountLoading, setAccountLoading] = React.useState(true);
+  const [accountSaving, setAccountSaving] = React.useState(false);
+  const [repoDialogOpen, setRepoDialogOpen] = React.useState(false);
+  const [repoInput, setRepoInput] = React.useState("");
+  const [repoSaving, setRepoSaving] = React.useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [deleteConfirm, setDeleteConfirm] = React.useState("");
+  const [deleting, setDeleting] = React.useState(false);
 
   const owner = profile?.repo.owner ?? "";
   const repoName = profile?.repo.name ?? "";
@@ -75,6 +102,180 @@ export default function SettingsPage() {
 
   // Derive initials for avatar
   const initials = owner ? owner[0].toUpperCase() : "?";
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setAccountLoading(true);
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+          if (!cancelled) router.replace("/login");
+          return;
+        }
+
+        const email = user.email ?? "";
+        const name =
+          (user.user_metadata?.full_name as string | undefined) ??
+          (user.user_metadata?.name as string | undefined) ??
+          "";
+
+        const res = await fetch("/api/onboarding", { method: "GET" });
+        if (!res.ok) {
+          throw new Error((await res.json())?.error ?? "Could not load onboarding profile");
+        }
+        const json = (await res.json()) as {
+          onboarding:
+            | null
+            | {
+                display_name: string | null;
+                personal_website: string | null;
+                company_name: string | null;
+                company_website: string | null;
+              };
+        };
+
+        if (cancelled) return;
+        setUserEmail(email);
+        setDisplayName(json.onboarding?.display_name ?? name);
+        setPersonalWebsite(json.onboarding?.personal_website ?? "");
+        setCompanyName(json.onboarding?.company_name ?? "");
+        setCompanyWebsite(json.onboarding?.company_website ?? "");
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "Could not load account settings";
+        if (!cancelled) toast.error(message);
+      } finally {
+        if (!cancelled) setAccountLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
+  async function saveAccount() {
+    setAccountSaving(true);
+    try {
+      const res = await fetch("/api/onboarding", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          displayName,
+          website: personalWebsite,
+          companyName,
+          companyWebsite,
+        }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => null);
+        const err = j?.error?.message ?? j?.error ?? "Could not save settings";
+        throw new Error(typeof err === "string" ? err : "Could not save settings");
+      }
+      toast.success("Saved settings");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save settings");
+    } finally {
+      setAccountSaving(false);
+    }
+  }
+
+  async function signOut() {
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } finally {
+      router.replace("/login");
+    }
+  }
+
+  async function refreshScan() {
+    try {
+      const res = await fetch("/api/scan/refresh", { method: "POST" });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        const err = json?.error ?? "Could not refresh scan";
+        throw new Error(typeof err === "string" ? err : "Could not refresh scan");
+      }
+      toast.success("Scan refresh started");
+      // force server components (dashboard layout + brand load) to revalidate on next nav
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not refresh scan");
+    }
+  }
+
+  async function connectRepo() {
+    const normalized = normalizeRepoInput(repoInput);
+    if (!normalized) {
+      toast.error("Enter owner/repo or a github.com URL.");
+      return;
+    }
+    const [nextOwner, nextName] = normalized.split("/");
+    setRepoSaving(true);
+    try {
+      const res = await fetch("/api/repos/connect", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ owner: nextOwner, name: nextName }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        const err = json?.error ?? "Could not connect repository";
+        throw new Error(typeof err === "string" ? err : "Could not connect repository");
+      }
+      toast.success(`Connected ${nextOwner}/${nextName}`);
+      setRepoDialogOpen(false);
+      // Immediately scan the newly connected repo
+      await refreshScan();
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not connect repository");
+    } finally {
+      setRepoSaving(false);
+    }
+  }
+
+  async function disconnectRepo() {
+    try {
+      const res = await fetch("/api/repos/disconnect", { method: "POST" });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        const err = json?.error ?? "Could not disconnect repository";
+        throw new Error(typeof err === "string" ? err : "Could not disconnect repository");
+      }
+      toast.success("Disconnected repository");
+      router.replace("/onboarding/connect");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not disconnect repository");
+    }
+  }
+
+  async function deleteAccount() {
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/account/delete", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ confirm: deleteConfirm }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        const err = json?.error ?? "Could not delete account";
+        throw new Error(typeof err === "string" ? err : "Could not delete account");
+      }
+      toast.success("Account deleted");
+      setDeleteDialogOpen(false);
+      router.replace("/login");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not delete account");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   return (
     <div className={dashboardMainContentClassName}>
@@ -130,6 +331,7 @@ export default function SettingsPage() {
                 placeholder="you@example.com"
                 className="max-w-[360px]"
                 readOnly
+                value={accountLoading ? "" : userEmail}
               />
             </div>
             <div>
@@ -144,14 +346,77 @@ export default function SettingsPage() {
                 type="text"
                 placeholder="Your name"
                 className="max-w-[360px]"
-                readOnly
+                value={accountLoading ? "" : displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                disabled={accountLoading}
+              />
+            </div>
+            <div>
+              <label
+                className="block mb-1 text-body-s text-[var(--text-secondary)]"
+                htmlFor="personal-website"
+              >
+                Personal website
+              </label>
+              <Input
+                id="personal-website"
+                type="url"
+                placeholder="https://example.com"
+                className="max-w-[360px]"
+                value={accountLoading ? "" : personalWebsite}
+                onChange={(e) => setPersonalWebsite(e.target.value)}
+                disabled={accountLoading}
+              />
+            </div>
+            <div>
+              <label
+                className="block mb-1 text-body-s text-[var(--text-secondary)]"
+                htmlFor="company-name"
+              >
+                Company name
+              </label>
+              <Input
+                id="company-name"
+                type="text"
+                placeholder="Your company"
+                className="max-w-[360px]"
+                value={accountLoading ? "" : companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                disabled={accountLoading}
+              />
+            </div>
+            <div>
+              <label
+                className="block mb-1 text-body-s text-[var(--text-secondary)]"
+                htmlFor="company-website"
+              >
+                Company website
+              </label>
+              <Input
+                id="company-website"
+                type="url"
+                placeholder="https://company.com"
+                className="max-w-[360px]"
+                value={accountLoading ? "" : companyWebsite}
+                onChange={(e) => setCompanyWebsite(e.target.value)}
+                disabled={accountLoading}
               />
             </div>
           </div>
 
-          <Button variant="danger" size="sm">
-            Sign out
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={saveAccount}
+              disabled={accountLoading || accountSaving}
+            >
+              {accountSaving ? "Saving…" : "Save changes"}
+            </Button>
+            <Button variant="danger" size="sm" onClick={signOut} disabled={accountLoading}>
+              Sign out
+            </Button>
+          </div>
         </SettingsCard>
 
         {/* ── 2. Repository ── */}
@@ -184,12 +449,52 @@ export default function SettingsPage() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" size="sm">
+            <Button variant="secondary" size="sm" onClick={refreshScan}>
               Refresh scan
             </Button>
-            <Button variant="outline" size="sm">
-              Change repo
-            </Button>
+            <Dialog open={repoDialogOpen} onOpenChange={setRepoDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  onClick={() => {
+                    setRepoInput(owner && repoName ? `${owner}/${repoName}` : "");
+                  }}
+                >
+                  Change repo
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Change repository</DialogTitle>
+                  <DialogDescription>
+                    Paste a GitHub URL or an <span className="font-mono">owner/repo</span> slug. We’ll scan it after connecting.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2">
+                  <label className="text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">
+                    Repository
+                  </label>
+                  <Input
+                    value={repoInput}
+                    onChange={(e) => setRepoInput(e.target.value)}
+                    placeholder="vercel/next.js or github.com/owner/repo"
+                    className="h-11 rounded-xl text-[14px] bg-[var(--bg-secondary)]"
+                    autoFocus
+                    disabled={repoSaving}
+                  />
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" type="button" onClick={() => setRepoDialogOpen(false)} disabled={repoSaving}>
+                    Cancel
+                  </Button>
+                  <Button type="button" onClick={connectRepo} disabled={repoSaving}>
+                    {repoSaving ? "Connecting…" : "Connect & scan"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="danger" size="sm" type="button">
@@ -206,7 +511,9 @@ export default function SettingsPage() {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction variant="danger">Disconnect</AlertDialogAction>
+                  <AlertDialogAction variant="danger" onClick={disconnectRepo}>
+                    Disconnect
+                  </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
@@ -329,9 +636,46 @@ export default function SettingsPage() {
             Permanently delete your account and all associated data. This
             action cannot be undone.
           </p>
-          <Button variant="danger" size="sm">
-            Delete account
-          </Button>
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogTrigger asChild>
+              <Button variant="danger" size="sm" type="button">
+                Delete account
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete your account and associated data. Type{" "}
+                  <span className="font-mono">DELETE</span> to confirm.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="space-y-2">
+                <label className="text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">
+                  Confirmation
+                </label>
+                <Input
+                  value={deleteConfirm}
+                  onChange={(e) => setDeleteConfirm(e.target.value)}
+                  placeholder="Type DELETE"
+                  className="h-11 rounded-xl text-[14px] bg-[var(--bg-secondary)]"
+                  disabled={deleting}
+                />
+              </div>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={deleting} onClick={() => setDeleteConfirm("")}>
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  variant="danger"
+                  onClick={deleteAccount}
+                  disabled={deleting || deleteConfirm.trim().toUpperCase() !== "DELETE"}
+                >
+                  {deleting ? "Deleting…" : "Delete account"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </SettingsCard>
       </div>
     </div>
