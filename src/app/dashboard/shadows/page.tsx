@@ -13,6 +13,7 @@ import {
 import { SectionHeading } from "@/components/dashboard/section-heading";
 import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
 import { TokenCard } from "@/components/dashboard/token-card";
+import { CopyButton } from "@/components/dashboard/token-page-kit";
 import { cn } from "@/lib/utils";
 import type { BrandProfile, BrandShadow } from "@/lib/brand/types";
 
@@ -76,8 +77,8 @@ function LayerTable({ shadow }: { shadow: BrandShadow }) {
         >
           <thead>
             <tr className="bg-[var(--bg-secondary)] text-[var(--text-tertiary)]">
-              {["x", "y", "blur", "spread", "color"].map((c) => (
-                <th key={c} className="px-2 py-1 text-left font-medium">
+              {["in", "x", "y", "blur", "spread", "color", ""].map((c, idx) => (
+                <th key={idx} className="px-2 py-1 text-left font-medium">
                   {c}
                 </th>
               ))}
@@ -89,6 +90,9 @@ function LayerTable({ shadow }: { shadow: BrandShadow }) {
                 key={i}
                 className="border-t border-[var(--border-subtle)] text-[var(--text-secondary)]"
               >
+                <td className="px-2 py-1">
+                  {layer.inset ? <span className="text-[var(--text-tertiary)]">inset</span> : "—"}
+                </td>
                 <td className="px-2 py-1">{layer.offsetX}</td>
                 <td className="px-2 py-1">{layer.offsetY}</td>
                 <td className="px-2 py-1">{layer.blur}</td>
@@ -100,8 +104,27 @@ function LayerTable({ shadow }: { shadow: BrandShadow }) {
                       className="inline-block h-2.5 w-2.5 rounded-sm border border-[var(--border-default)]"
                       style={{ backgroundColor: layer.colorHex }}
                     />
-                    <span>{layer.colorHex}</span>
+                    <span className="max-w-[140px] truncate" title={layer.color}>
+                      {layer.colorVarRef ?? layer.color}
+                    </span>
                   </div>
+                </td>
+                <td className="px-1 py-0.5">
+                  <CopyButton
+                    text={[
+                      layer.inset ? "inset" : "",
+                      layer.offsetX,
+                      layer.offsetY,
+                      layer.blur,
+                      layer.spread,
+                      layer.color,
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    label="Layer"
+                    size="sm"
+                    className="h-7 text-[10px] px-1.5"
+                  />
                 </td>
               </tr>
             ))}
@@ -138,10 +161,22 @@ function ShadowsElevationPanel({
             specs={[
               { label: `${shadow.layers.length || 1}L` },
               { label: surface === "light" ? "light" : "dark" },
+              ...(shadow.tokenRefs?.length
+                ? [{ label: shadow.tokenRefs.join(" · ") }]
+                : []),
             ]}
             copyValue={shadow.value}
-            copyLabel={shadow.value}
-            footer={<LayerTable shadow={shadow} />}
+            copyLabel="box-shadow"
+            footer={
+              <div className="space-y-1">
+                {shadow.tokenRefs?.length ? (
+                  <p className="text-[10px] text-[var(--text-tertiary)]" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                    Refs: {shadow.tokenRefs.join(", ")}
+                  </p>
+                ) : null}
+                <LayerTable shadow={shadow} />
+              </div>
+            }
           />
         ))}
       </div>

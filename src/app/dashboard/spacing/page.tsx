@@ -4,6 +4,7 @@ import * as React from "react";
 import { UnfoldVertical } from "lucide-react";
 import { useBrandStore } from "@/stores/brand";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   BrandTokenPageHero,
@@ -15,13 +16,47 @@ import { SectionHeading } from "@/components/dashboard/section-heading";
 import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
 import { TokenRow, TokenRowGroup } from "@/components/dashboard/token-row";
 import { TokenCard } from "@/components/dashboard/token-card";
+import {
+  TokenSearchInput,
+  useDeferredQuery,
+} from "@/components/dashboard/token-page-kit";
 import type { BrandSpacing } from "@/lib/brand/types";
-
 const HERO_DESC =
   "Padding, margin, and gap values extracted from your repository — tap any row to copy the CSS value.";
 
+function spacingTier(px: number): "Tiny" | "Small" | "Medium" | "Large" {
+  if (px <= 4) return "Tiny";
+  if (px <= 16) return "Small";
+  if (px <= 64) return "Medium";
+  return "Large";
+}
+
+function matchesQuery(s: BrandSpacing, q: string): boolean {
+  if (!q) return true;
+  const pool = [
+    s.name,
+    s.rem,
+    String(s.px),
+    s.source,
+    ...s.tailwindClasses,
+  ]
+    .join(" ")
+    .toLowerCase();
+  return pool.includes(q);
+}
+
 export default function SpacingPage() {
   const profile = useBrandStore((s) => s.profile);
+
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === "development" && profile) {
+      console.info("[brand-page]", "spacing", profile.repo?.name);
+    }
+  }, [profile]);
+
+  const [search, setSearch] = React.useState("");
+  const q = useDeferredQuery(search);
+  const [unit, setUnit] = React.useState<"px" | "rem">("px");
 
   if (!profile || profile.spacing.length === 0) {
     return (
@@ -49,13 +84,39 @@ export default function SpacingPage() {
     profile.meta.cssSource || profile.meta.tailwindConfigPath || "repo";
 
   const sorted = [...profile.spacing].sort((a, b) => a.px - b.px);
+  const filtered = sorted.filter((s) => matchesQuery(s, q));
   const maxPx = Math.max(...sorted.map((s) => s.px), 1);
+
+  const byTier: Record<ReturnType<typeof spacingTier>, BrandSpacing[]> = {
+    Tiny: [],
+    Small: [],
+    Medium: [],
+    Large: [],
+  };
+  for (const s of filtered) {
+    byTier[spacingTier(s.px)].push(s);
+  }
 
   const spacingMap: Record<string, BrandSpacing> = {};
   for (const s of profile.spacing) spacingMap[s.name] = s;
   const sp4 = spacingMap["4"] ?? sorted[Math.min(3, sorted.length - 1)];
   const sp2 = spacingMap["2"] ?? sorted[Math.min(1, sorted.length - 1)];
   const sp6 = spacingMap["6"] ?? spacingMap["5"] ?? sp4;
+
+  const classPreview = (s: BrandSpacing) => {
+    const t = s.tailwindClasses;
+    if (t.length <= 2) return t.join(" · ");
+    return `${t[0]} · ${t[1]} · +${t.length - 2}`;
+  };
+
+  const valueCell = (s: BrandSpacing) => (
+    <div className="space-y-0.5 text-[var(--text-primary)]">
+      <div>{unit === "px" ? `${s.px}px` : s.rem}</div>
+      <div className="text-[10px] text-[var(--text-tertiary)]">
+        {unit === "px" ? s.rem : `${s.px}px`}
+      </div>
+    </div>
+  );
 
   return (
     <BrandTokenPageLayout
@@ -71,9 +132,34 @@ export default function SpacingPage() {
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
       <div className="space-y-6">
-        <TokenPageProvenanceLine>
-          Auto-extracted from {source} · {sorted.length} tokens
-        </TokenPageProvenanceLine>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <TokenPageProvenanceLine>
+            Auto-extracted from {source} · {sorted.length} tokens
+          </TokenPageProvenanceLine>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-lg border border-[var(--border-subtle)] p-0.5">
+              <Button
+                type="button"
+                size="sm"
+                variant={unit === "px" ? "default" : "ghost"}
+                className="h-7 px-2.5 text-[12px]"
+                onClick={() => setUnit("px")}
+              >
+                px
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={unit === "rem" ? "default" : "ghost"}
+                className="h-7 px-2.5 text-[12px]"
+                onClick={() => setUnit("rem")}
+              >
+                rem
+              </Button>
+            </div>
+            <TokenSearchInput value={search} onValueChange={setSearch} className="w-full min-w-[200px] sm:max-w-xs" />
+          </div>
+        </div>
 
         <TokenPagePillTabs
           defaultValue="scale"
@@ -82,47 +168,53 @@ export default function SpacingPage() {
               value: "scale",
               label: "Scale",
               content: (
-                <section>
-                  <SectionHeading description="Ordered from smallest to largest. Bar length is proportional to the raw pixel value.">
-                    Scale
-                  </SectionHeading>
-                  <TokenRowGroup>
-                    {sorted.map((s) => (
-                      <TokenRow
-                        key={s.name}
-                        preview={
-                          <div
-                            aria-hidden
-                            className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-[var(--bg-secondary)]"
-                          >
-                            <span
-                              className="block h-1 rounded-full bg-[var(--accent)]"
-                              style={{
-                                width: `${Math.max(3, (s.px / maxPx) * 36)}px`,
-                              }}
+                <section className="space-y-8">
+                  {(["Tiny", "Small", "Medium", "Large"] as const).map((tier) => {
+                    const list = byTier[tier];
+                    if (list.length === 0) return null;
+                    return (
+                      <div key={tier}>
+                        <SectionHeading description="Ordered smallest → largest. Bar width ∝ pixel value.">
+                          {tier}
+                        </SectionHeading>
+                        <TokenRowGroup>
+                          {list.map((s) => (
+                            <TokenRow
+                              key={s.name + tier}
+                              preview={
+                                <div
+                                  aria-hidden
+                                  className="flex h-10 w-10 items-center justify-center rounded-[6px] bg-[var(--bg-secondary)]"
+                                >
+                                  <span
+                                    className="block h-1 rounded-full bg-[var(--accent)]"
+                                    style={{
+                                      width: `${Math.max(3, (s.px / maxPx) * 36)}px`,
+                                    }}
+                                  />
+                                </div>
+                              }
+                              name={s.name}
+                              subtitle={classPreview(s)}
+                              meta={valueCell(s)}
+                              copyValue={unit === "px" ? `${s.px}px` : s.rem}
+                              copyLabel={unit === "px" ? `${s.px}px` : s.rem}
+                              trailingBadge={
+                                s.isCustom ? (
+                                  <Badge variant="accent" className="h-4 px-1.5 text-[9.5px]">
+                                    custom
+                                  </Badge>
+                                ) : null
+                              }
                             />
-                          </div>
-                        }
-                        name={s.name}
-                        subtitle={s.tailwindClass}
-                        meta={
-                          <div className="space-y-0.5 text-[var(--text-primary)]">
-                            <div>{s.rem}</div>
-                            <div className="text-[var(--text-tertiary)]">{s.px}px</div>
-                          </div>
-                        }
-                        copyValue={s.rem}
-                        copyLabel={s.rem}
-                        trailingBadge={
-                          s.isCustom ? (
-                            <Badge variant="accent" className="h-4 px-1.5 text-[9.5px]">
-                              custom
-                            </Badge>
-                          ) : null
-                        }
-                      />
-                    ))}
-                  </TokenRowGroup>
+                          ))}
+                        </TokenRowGroup>
+                      </div>
+                    );
+                  })}
+                  {filtered.length === 0 ? (
+                    <p className="text-body-s text-[var(--text-secondary)]">No matches for &quot;{search}&quot;.</p>
+                  ) : null}
                 </section>
               ),
             },
@@ -150,7 +242,7 @@ export default function SpacingPage() {
                         </div>
                       }
                       name={`padding: ${sp4?.name ?? "4"}`}
-                      subtitle={`p-${sp4?.name ?? "4"}`}
+                      subtitle={sp4?.tailwindClasses[0] ?? "p-4"}
                       specs={[
                         { label: sp4?.rem ?? "1rem" },
                         { label: `${sp4?.px ?? 16}px` },
@@ -179,7 +271,7 @@ export default function SpacingPage() {
                         </div>
                       }
                       name={`column gap: ${sp4?.name ?? "4"}`}
-                      subtitle={`gap-${sp4?.name ?? "4"}`}
+                      subtitle={sp4?.tailwindClasses[2] ?? "gap-4"}
                       specs={[
                         { label: sp4?.rem ?? "1rem" },
                         { label: `${sp4?.px ?? 16}px` },

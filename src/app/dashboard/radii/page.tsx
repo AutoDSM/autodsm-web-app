@@ -20,6 +20,13 @@ import { cn } from "@/lib/utils";
 const HERO_DESC =
   "Border-radius tokens for rounded corners — see the progression, copy values, or preview on live components.";
 
+function radiusTier(px: number): "Small" | "Medium" | "Large" | "Pill" {
+  if (px >= 200) return "Pill";
+  if (px >= 20) return "Large";
+  if (px >= 9) return "Medium";
+  return "Small";
+}
+
 export default function RadiiPage() {
   const profile = useBrandStore((s) => s.profile);
 
@@ -52,6 +59,16 @@ export default function RadiiPage() {
   const cardRadius =
     sorted.find((r) => r.px >= 12 && r.px <= 20) ?? sorted[sorted.length - 2] ?? sorted[0];
   const pillRadius = sorted[sorted.length - 1];
+
+  const byTier: Record<ReturnType<typeof radiusTier>, typeof sorted> = {
+    Small: [],
+    Medium: [],
+    Large: [],
+    Pill: [],
+  };
+  for (const r of sorted) {
+    byTier[radiusTier(r.px)].push(r);
+  }
 
   return (
     <BrandTokenPageLayout
@@ -112,6 +129,70 @@ export default function RadiiPage() {
                       </div>
                     ))}
                   </div>
+                </section>
+              ),
+            },
+            {
+              value: "scale",
+              label: "By scale",
+              content: (
+                <section className="space-y-8">
+                  {(["Small", "Medium", "Large", "Pill"] as const).map((tier) => {
+                    const list = byTier[tier];
+                    if (list.length === 0) return null;
+                    return (
+                      <div key={tier}>
+                        <SectionHeading
+                          description={
+                            tier === "Small"
+                              ? "≤8px — tight UI, tags"
+                              : tier === "Medium"
+                                ? "9–19px — controls, cards"
+                                : tier === "Large"
+                                  ? "20px+ — panels, modals"
+                                  : "Very large / full — pills and circles"
+                          }
+                        >
+                          {tier}
+                        </SectionHeading>
+                        <div
+                          className={cn(
+                            brandTokenSurface,
+                            "flex flex-wrap items-end gap-6 overflow-x-auto px-5 py-6",
+                          )}
+                        >
+                          {list.map((radius) => (
+                            <div key={radius.name + tier} className="flex min-w-[64px] flex-col items-center gap-2">
+                              <div
+                                className="h-14 w-14 border border-[var(--border-default)]"
+                                style={{
+                                  borderRadius: radius.value,
+                                  backgroundColor: "var(--accent-subtle)",
+                                }}
+                              />
+                              <div className="text-center">
+                                <div
+                                  className="text-[11px] font-medium text-[var(--text-primary)]"
+                                  style={{ fontFamily: "var(--font-geist-mono)" }}
+                                >
+                                  {radius.name}
+                                </div>
+                                {radius.cssVariable ? (
+                                  <div className="text-[9px] text-[var(--text-tertiary)]">{radius.cssVariable}</div>
+                                ) : null}
+                                <div
+                                  className="text-[10.5px] text-[var(--text-tertiary)]"
+                                  style={{ fontFamily: "var(--font-geist-mono)" }}
+                                >
+                                  {radius.px}px
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </section>
               ),
             },

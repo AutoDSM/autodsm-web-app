@@ -117,40 +117,58 @@ export default function BordersPage() {
               value: "tokens",
               label: "Tokens",
               content: (
-                <section>
-                  <SectionHeading description="Each row renders a live inline preview with the token's width, style, and color.">
-                    All tokens
-                  </SectionHeading>
-                  <TokenRowGroup>
-                    {profile.borders.map((b) => {
-                      const css = borderValue(b);
-                      return (
-                        <TokenRow
-                          key={b.name + b.source}
-                          preview={
-                            <div
-                              aria-hidden
-                              className="h-10 w-10 rounded-[6px] bg-[var(--bg-elevated)]"
-                              style={{ border: css }}
-                            />
-                          }
-                          name={b.name}
-                          subtitle={b.colorToken ?? b.color}
-                          meta={
-                            <div className="space-y-0.5 text-[var(--text-primary)]">
-                              <div>
-                                {b.width}{" "}
-                                <span className="text-[var(--text-tertiary)]">·</span> {b.style}
-                              </div>
-                              <div className="text-[var(--text-tertiary)]">{b.color}</div>
-                            </div>
-                          }
-                          copyValue={`border: ${css};`}
-                          copyLabel={css}
-                        />
-                      );
-                    })}
-                  </TokenRowGroup>
+                <section className="space-y-8">
+                  {(
+                    [
+                      ["all", "All", () => true] as const,
+                      ["source", "CSS variables", (b: (typeof profile.borders)[0]) => b.borderGroup === "source" || !b.borderGroup] as const,
+                      ["width", "Width", (b: (typeof profile.borders)[0]) => b.borderGroup === "width"] as const,
+                      ["color", "Color", (b: (typeof profile.borders)[0]) => b.borderGroup === "color"] as const,
+                      ["style", "Style", (b: (typeof profile.borders)[0]) => b.borderGroup === "style"] as const,
+                    ] as const
+                  ).map(([id, label, filter]) => {
+                    const list = profile.borders.filter(
+                      (b) => (id === "all" ? true : filter(b)),
+                    );
+                    if (list.length === 0) return null;
+                    return (
+                      <div key={id}>
+                        <SectionHeading description="Live border preview; row copies the full `border` shorthand.">
+                          {label}
+                        </SectionHeading>
+                        <TokenRowGroup>
+                          {list.map((b) => {
+                            const css = borderValue(b);
+                            return (
+                              <TokenRow
+                                key={b.name + b.source + id}
+                                preview={
+                                  <div
+                                    aria-hidden
+                                    className="h-10 w-10 rounded-[6px] bg-[var(--bg-elevated)]"
+                                    style={{ border: css }}
+                                  />
+                                }
+                                name={b.name}
+                                subtitle={b.colorToken ?? b.color}
+                                meta={
+                                  <div className="space-y-0.5 text-[var(--text-primary)]">
+                                    <div>
+                                      {b.width}{" "}
+                                      <span className="text-[var(--text-tertiary)]">·</span> {b.style}
+                                    </div>
+                                    <div className="text-[var(--text-tertiary)]">{b.color}</div>
+                                  </div>
+                                }
+                                copyValue={`border: ${css};`}
+                                copyLabel={css}
+                              />
+                            );
+                          })}
+                        </TokenRowGroup>
+                      </div>
+                    );
+                  })}
                 </section>
               ),
             },

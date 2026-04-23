@@ -9,6 +9,7 @@ import {
   BrandTokenPageHero,
   BrandTokenPageLayout,
   LastUpdatedLabel,
+  TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
 import { TypographyBodyCard } from "@/components/ui/typography-body-card";
 import { TypographyContainerCard } from "@/components/ui/typography-container-card";
@@ -135,6 +136,8 @@ export default function TypographyPage() {
   const bodySorted = [...body].sort((a, b) => b.fontSizePx - a.fontSizePx);
   const captionSorted = [...caption].sort((a, b) => b.fontSizePx - a.fontSizePx);
 
+  const typeSource = profile.meta.tailwindConfigPath || profile.meta.cssSource || "repo";
+
   return (
     <BrandTokenPageLayout
       hero={
@@ -146,6 +149,39 @@ export default function TypographyPage() {
       }
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
+      {profile.fonts.length > 0 ? (
+        <div className="mb-8 space-y-3">
+          <h2 className="text-[15px] font-semibold text-[var(--text-primary)]">Font families</h2>
+          <TokenPageProvenanceLine>
+            Detected from {typeSource} · {profile.fonts.length} font
+            {profile.fonts.length === 1 ? "" : "s"}
+          </TokenPageProvenanceLine>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {profile.fonts.map((f) => (
+              <div
+                key={f.family + f.source}
+                className="rounded-[10px] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4"
+              >
+                <p className="text-[13px] font-medium text-[var(--text-primary)]">{f.family}</p>
+                <p className="mt-1 text-[12px] text-[var(--text-tertiary)]">{f.importMethod}</p>
+                <p className="text-[11px] text-[var(--text-tertiary)]">{f.source}</p>
+                <p className="mt-2 text-[12px] text-[var(--text-secondary)]" style={{ fontFamily: f.fallbacks.join(", ") }}>
+                  {f.weights.map((w) => w.name).join(", ")} · role: {f.role}
+                </p>
+                <p
+                  className="mt-2 text-h2"
+                  style={{
+                    fontFamily: `${f.family}, ${f.fallbacks.join(", ")}`,
+                  }}
+                >
+                  Aa Bb Cc
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       <Tabs defaultValue="headings" className="w-full max-w-full">
         <TabsList variant="pill" className="h-auto w-full max-w-md">
           <TabsTrigger value="headings">Headings</TabsTrigger>

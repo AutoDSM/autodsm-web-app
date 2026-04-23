@@ -38,6 +38,9 @@ function StopPill({ stop }: { stop: BrandGradient["stops"][number] }) {
       {stop.position ? (
         <span className="text-[var(--text-tertiary)]">{stop.position}</span>
       ) : null}
+      {stop.tokenRef ? (
+        <span className="max-w-[100px] truncate text-[9px] text-[var(--text-tertiary)]">{stop.tokenRef}</span>
+      ) : null}
     </div>
   );
 }
@@ -111,9 +114,14 @@ export default function GradientsPage() {
                         name={g.name}
                         subtitle={`${g.stops.length} stop${g.stops.length === 1 ? "" : "s"}`}
                         copyValue={`background: ${g.cssValue};`}
-                        copyLabel={g.cssValue}
+                        copyLabel="background CSS"
                         footer={
                           <div className="flex flex-wrap gap-1.5">
+                            {g.type === "linear" && g.direction ? (
+                              <span className="w-full text-[10px] text-[var(--text-tertiary)]">
+                                Angle: {g.direction}
+                              </span>
+                            ) : null}
                             {g.stops.map((stop, i) => (
                               <StopPill key={i} stop={stop} />
                             ))}
@@ -157,7 +165,7 @@ export default function GradientsPage() {
                           </div>
                         }
                         copyValue={`background: ${g.cssValue};`}
-                        copyLabel={g.cssValue}
+                        copyLabel={g.name}
                       />
                     ))}
                   </TokenRowGroup>

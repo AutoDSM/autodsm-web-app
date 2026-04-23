@@ -16,6 +16,11 @@ import {
 } from "@/components/dashboard/brand-token-page-layout";
 import { CompactColorTokenRow } from "@/components/dashboard/compact-color-token-row";
 import { brandDashboardCardRadius } from "@/components/ui/brand-card-tokens";
+import {
+  TokenSearchInput,
+  useDeferredQuery,
+} from "@/components/dashboard/token-page-kit";
+import type { ColorGroup } from "@/lib/brand/types";
 
 function filterPalette(
   all: BrandColor[],
@@ -48,8 +53,23 @@ function EmptyTabStrip({ children }: { children: React.ReactNode }) {
 const HERO_DESC =
   "Palette tokens extracted from your repository—hover a swatch for channels and token details.";
 
+const GROUPS: { id: "all" | ColorGroup; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "brand", label: "Brand" },
+  { id: "accent", label: "Accent" },
+  { id: "semantic", label: "Semantic" },
+  { id: "neutral", label: "Neutral" },
+  { id: "surface", label: "Surface" },
+  { id: "interactive", label: "Interactive" },
+  { id: "chart", label: "Chart" },
+  { id: "custom", label: "Custom" },
+];
+
 export default function ColorsPage() {
   const profile = useBrandStore((s) => s.profile);
+  const [search, setSearch] = React.useState("");
+  const [groupTab, setGroupTab] = React.useState<string>("all");
+  const q = useDeferredQuery(search);
 
   const onCopyHex = React.useCallback(async (displayHex: string) => {
     try {
@@ -92,8 +112,17 @@ export default function ColorsPage() {
     );
   }
 
-  const primary = filterPalette(profile.colors, "primary");
-  const secondary = filterPalette(profile.colors, "secondary");
+  const filtered = profile.colors.filter((c) => {
+    if (q && !`${c.name} ${c.value} ${c.cssVariable} ${c.hsl} ${c.rgb} ${c.group} ${c.oklch ?? ""}`.toLowerCase().includes(q)) {
+      return false;
+    }
+    if (groupTab === "all") return true;
+    return c.group === groupTab;
+  });
+
+  const primary = filterPalette(filtered, "primary");
+  const secondary = filterPalette(filtered, "secondary");
+  const byGroup = filtered;
 
   return (
     <BrandTokenPageLayout
@@ -109,25 +138,59 @@ export default function ColorsPage() {
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
       <div className="space-y-6">
-        <TokenPageProvenanceLine>Auto-extracted from {source}</TokenPageProvenanceLine>
+        <div className="space-y-4">
+          <TokenPageProvenanceLine>Auto-extracted from {source}</TokenPageProvenanceLine>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex flex-wrap gap-1.5">
+              {GROUPS.map((g) => (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => setGroupTab(g.id)}
+                  className={cn(
+                    "rounded-full border px-2.5 py-1 text-[12px] transition-colors",
+                    groupTab === g.id
+                      ? "border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-primary)]"
+                      : "border-transparent text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]",
+                  )}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
+            <TokenSearchInput
+              value={search}
+              onValueChange={setSearch}
+              className="w-full min-w-0 sm:max-w-sm"
+            />
+          </div>
+        </div>
 
         <Tabs defaultValue="primary" className="w-full max-w-full">
           <TabsList variant="pill" className="h-auto w-full max-w-md">
-            <TabsTrigger value="primary">Primary</TabsTrigger>
-            <TabsTrigger value="secondary">Secondary</TabsTrigger>
+            <TabsTrigger value="primary">Curated: Primary</TabsTrigger>
+            <TabsTrigger value="secondary">Curated: Secondary</TabsTrigger>
+            <TabsTrigger value="allgroup">This group</TabsTrigger>
           </TabsList>
 
           <TabsContent value="primary" className="mt-6 outline-none">
             <PaletteListPanel
               list={primary}
-              emptyLabel="No primary palette tokens found for this repository (brand group or names containing “primary”)."
+              emptyLabel="No primary palette tokens in this view."
               onCopyHex={onCopyHex}
             />
           </TabsContent>
           <TabsContent value="secondary" className="mt-6 outline-none">
             <PaletteListPanel
               list={secondary}
-              emptyLabel="No secondary palette tokens found for this repository (accent group or names containing “secondary”)."
+              emptyLabel="No secondary palette tokens in this view."
+              onCopyHex={onCopyHex}
+            />
+          </TabsContent>
+          <TabsContent value="allgroup" className="mt-6 outline-none">
+            <PaletteListPanel
+              list={byGroup}
+              emptyLabel="No colors in the selected group."
               onCopyHex={onCopyHex}
             />
           </TabsContent>

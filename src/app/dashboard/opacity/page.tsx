@@ -14,6 +14,10 @@ import { SectionHeading } from "@/components/dashboard/section-heading";
 import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
 import { TokenCard } from "@/components/dashboard/token-card";
 import { brandDashboardCardRadius } from "@/components/ui/brand-card-tokens";
+import {
+  TokenSearchInput,
+  useDeferredQuery,
+} from "@/components/dashboard/token-page-kit";
 import { cn } from "@/lib/utils";
 
 const CHECKERBOARD = `repeating-conic-gradient(
@@ -26,6 +30,8 @@ const HERO_DESC =
 
 export default function OpacityPage() {
   const profile = useBrandStore((s) => s.profile);
+  const [q, setQ] = React.useState("");
+  const d = useDeferredQuery(q);
 
   if (!profile || profile.opacity.length === 0) {
     return (
@@ -48,6 +54,12 @@ export default function OpacityPage() {
   }
 
   const sorted = [...profile.opacity].sort((a, b) => a.value - b.value);
+  const filtered = sorted.filter((o) => {
+    if (!d) return true;
+    return `${o.name} ${o.percentage} ${o.value} ${o.source} opacity-${o.name}`
+      .toLowerCase()
+      .includes(d);
+  });
   const source = profile.meta.cssSource || profile.meta.tailwindConfigPath || "repo";
 
   return (
@@ -62,9 +74,12 @@ export default function OpacityPage() {
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
       <div className="space-y-6">
-        <TokenPageProvenanceLine>
-          Auto-extracted from {source} · {sorted.length} tokens
-        </TokenPageProvenanceLine>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <TokenPageProvenanceLine>
+            Auto-extracted from {source} · {sorted.length} tokens
+          </TokenPageProvenanceLine>
+          <TokenSearchInput value={q} onValueChange={setQ} className="w-full sm:max-w-xs" />
+        </div>
 
         <TokenPagePillTabs
           defaultValue="scale"
@@ -78,7 +93,7 @@ export default function OpacityPage() {
                     Scale
                   </SectionHeading>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    {sorted.map((o) => (
+                    {filtered.map((o) => (
                       <TokenCard
                         key={o.name + o.value}
                         eyebrow="OPACITY"
@@ -102,8 +117,8 @@ export default function OpacityPage() {
                           { label: o.percentage },
                           { label: o.value.toFixed(2) },
                         ]}
-                        copyValue={`opacity: ${o.value};`}
-                        copyLabel={`opacity: ${o.value}`}
+                        copyValue={`opacity: ${o.value} /* or tailwind: opacity-${o.name} */`}
+                        copyLabel={`opacity-${o.name}`}
                       />
                     ))}
                   </div>

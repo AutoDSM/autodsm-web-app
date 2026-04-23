@@ -20,9 +20,52 @@ import type { BrandAnimation } from "@/lib/brand/types";
 const HERO_DESC =
   "Keyframes and transition timings extracted from your theme — hit Replay on any card to preview the motion.";
 
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = React.useState(false);
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduced(mq.matches);
+    const on = () => setReduced(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  return reduced;
+}
+
+function keyframeNameFromCss(css: string | undefined): string | null {
+  if (!css) return null;
+  const m = css.match(/@keyframes\s+([\w-]+)/);
+  return m?.[1] ?? null;
+}
+
 function AnimatedPreview({ anim, nonce }: { anim: BrandAnimation; nonce: number }) {
+  const reduced = usePrefersReducedMotion();
   const dur = anim.duration || "400ms";
   const ease = anim.timingFunction || "cubic-bezier(0.4, 0, 0.2, 1)";
+
+  if (reduced) {
+    return (
+      <div className="flex h-full w-full items-center justify-center px-3 text-center text-[11px] text-[var(--text-tertiary)]">
+        Motion reduced
+      </div>
+    );
+  }
+
+  if (anim.type === "keyframes" && anim.keyframes) {
+    const kf = keyframeNameFromCss(anim.keyframes) ?? anim.name;
+    return (
+      <div className="relative flex h-full w-full items-center justify-center" key={nonce}>
+        <style>{anim.keyframes}</style>
+        <div
+          className="h-10 w-10 rounded-[8px] bg-[var(--accent)]"
+          style={{
+            animation: `${kf} ${dur} ${ease} infinite`,
+          }}
+        />
+      </div>
+    );
+  }
 
   const kind: "pulse" | "slide" | "spin" | "fade" = (() => {
     const n = anim.name.toLowerCase();
@@ -164,17 +207,32 @@ function MotionGrid({
               { icon: <Timer strokeWidth={1.6} />, label: anim.duration },
               { icon: <Activity strokeWidth={1.6} />, label: anim.timingFunction },
             ]}
-            copyValue={css}
-            copyLabel={css}
+            copyValue={
+              anim.keyframes
+                ? `${css}\n\n${anim.keyframes}`
+                : css
+            }
+            copyLabel="Animation"
             footer={
-              <button
-                type="button"
-                onClick={() => replay(anim.name)}
-                className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-2.5 text-[11px] font-medium text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-              >
-                <Play size={12} strokeWidth={1.6} />
-                Replay
-              </button>
+              <div className="space-y-1">
+                {anim.keyframes ? (
+                  <pre
+                    className="max-h-24 overflow-auto rounded-md border border-[var(--border-subtle)] bg-[var(--bg-canvas)] p-2 text-[9px] text-[var(--text-tertiary)]"
+                    style={{ fontFamily: "var(--font-geist-mono)" }}
+                  >
+                    {anim.keyframes.slice(0, 500)}
+                    {anim.keyframes.length > 500 ? "…" : ""}
+                  </pre>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => replay(anim.name)}
+                  className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-2.5 text-[11px] font-medium text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+                >
+                  <Play size={12} strokeWidth={1.6} />
+                  Replay
+                </button>
+              </div>
             }
           />
         );

@@ -14,6 +14,7 @@ import { SectionHeading } from "@/components/dashboard/section-heading";
 import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
 import { TokenCard } from "@/components/dashboard/token-card";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 import type { BrandAsset } from "@/lib/brand/types";
 
 const CATEGORY_ORDER: BrandAsset["category"][] = [
@@ -94,11 +95,14 @@ function AssetPreview({ asset }: { asset: BrandAsset }) {
     );
   }
   if (asset.storageUrl) {
+    const w = asset.dimensions?.width ?? 200;
+    const h = asset.dimensions?.height ?? 200;
     return (
-      // eslint-disable-next-line @next/next/no-img-element -- dynamic external URLs (Supabase)
-      <img
+      <Image
         src={asset.storageUrl}
         alt={asset.name}
+        width={w}
+        height={h}
         className="max-h-full max-w-full object-contain p-4"
       />
     );
@@ -204,8 +208,12 @@ export default function AssetsPage() {
                           name={asset.name}
                           subtitle={asset.path}
                           specs={specs}
-                          copyValue={asset.path}
-                          copyLabel={asset.path}
+                          copyValue={
+                            asset.storageUrl
+                              ? `<Image src="${asset.storageUrl}" alt="${asset.name}" width={${asset.dimensions?.width ?? 100}} height={${asset.dimensions?.height ?? 100}} />`
+                              : asset.path
+                          }
+                          copyLabel={asset.storageUrl ? "Image snippet" : "Path"}
                         />
                       );
                     })}
