@@ -13,10 +13,6 @@ import { SectionHeading } from "@/components/dashboard/section-heading";
 import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
 import { TokenRow, TokenRowGroup } from "@/components/dashboard/token-row";
 import { brandTokenSurface } from "@/components/ui/brand-card-tokens";
-import {
-  TokenSearchInput,
-  useDeferredQuery,
-} from "@/components/dashboard/token-page-kit";
 import { cn } from "@/lib/utils";
 
 const HERO_DESC =
@@ -24,8 +20,6 @@ const HERO_DESC =
 
 export default function ZIndexPage() {
   const profile = useBrandStore((s) => s.profile);
-  const [q, setQ] = React.useState("");
-  const d = useDeferredQuery(q);
   const valueCounts = React.useMemo(() => {
     const m = new Map<number, number>();
     for (const z of profile?.zIndex ?? []) {
@@ -58,12 +52,6 @@ export default function ZIndexPage() {
   const duplicateValues = [...valueCounts.entries()]
     .filter(([, c]) => c > 1)
     .map(([v]) => v);
-  const filtered = sorted.filter((z) => {
-    if (!d) return true;
-    return `${z.name} ${z.value} ${z.source} ${z.inferredRole ?? ""} ${z.tailwindClass}`
-      .toLowerCase()
-      .includes(d);
-  });
   return (
     <BrandTokenPageLayout
       hero={
@@ -76,20 +64,13 @@ export default function ZIndexPage() {
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
       <div className="space-y-6">
-        <div className="flex flex-col gap-2">
-          <TokenSearchInput
-            value={q}
-            onValueChange={setQ}
-            className="ml-auto w-full max-w-xs"
-          />
-          {duplicateValues.length > 0 ? (
-            <p className="text-[12px] text-amber-600 dark:text-amber-400" role="status">
-              Same z-index value used {duplicateValues.length} time
-              {duplicateValues.length > 1 ? "s" : ""}: {duplicateValues.join(", ")} — may cause stacking
-              issues.
-            </p>
-          ) : null}
-        </div>
+        {duplicateValues.length > 0 ? (
+          <p className="text-[12px] text-amber-600 dark:text-amber-400" role="status">
+            Same z-index value used {duplicateValues.length} time
+            {duplicateValues.length > 1 ? "s" : ""}: {duplicateValues.join(", ")} — may cause stacking
+            issues.
+          </p>
+        ) : null}
 
         <TokenPagePillTabs
           defaultValue="stack"
@@ -106,7 +87,7 @@ export default function ZIndexPage() {
                     )}
                   >
                     <div className="relative mx-auto h-full w-full max-w-[420px]">
-                      {filtered.map((z, i) => {
+                      {sorted.map((z, i) => {
                         const offset = i * 16;
                         return (
                           <div
@@ -152,7 +133,7 @@ export default function ZIndexPage() {
                     All tokens
                   </SectionHeading>
                   <TokenRowGroup>
-                    {filtered.map((z) => (
+                    {sorted.map((z) => (
                       <TokenRow
                         key={z.name + z.value}
                         preview={

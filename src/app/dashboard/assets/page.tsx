@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Image as ImageIcon, Images, Sun, Palette } from "lucide-react";
+import { Image as ImageIcon, Images } from "lucide-react";
 import { useBrandStore } from "@/stores/brand";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -11,7 +11,6 @@ import {
 } from "@/components/dashboard/brand-token-page-layout";
 import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
 import { TokenCard } from "@/components/dashboard/token-card";
-import { cn } from "@/lib/utils";
 import Image from "next/image";
 import type { BrandAsset } from "@/lib/brand/types";
 
@@ -33,55 +32,6 @@ const CATEGORY_LABELS: Record<BrandAsset["category"], string> = {
 
 const HERO_DESC =
   "Logos, icons, illustrations, and raster assets discovered across your repository.";
-
-const CHECKERBOARD = `repeating-conic-gradient(
-  var(--border-subtle) 0% 25%,
-  transparent 0% 50%
-) 50% / 12px 12px`;
-
-type Surface = "paper" | "transparent";
-
-function SurfaceToggle({
-  value,
-  onChange,
-}: {
-  value: Surface;
-  onChange: (v: Surface) => void;
-}) {
-  return (
-    <div
-      role="tablist"
-      aria-label="Preview surface"
-      className="inline-flex items-center gap-0.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] p-0.5"
-    >
-      {([
-        { v: "paper", label: "Surface", Icon: Sun },
-        { v: "transparent", label: "Transparent", Icon: Palette },
-      ] as const).map(({ v, label, Icon }) => {
-        const active = value === v;
-        return (
-          <button
-            key={v}
-            role="tab"
-            aria-selected={active}
-            type="button"
-            onClick={() => onChange(v)}
-            className={cn(
-              "inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium",
-              "transition-colors duration-150 [transition-timing-function:var(--ease-standard)]",
-              active
-                ? "bg-[var(--bg-elevated)] text-[var(--text-primary)] shadow-[var(--shadow-xs)]"
-                : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]",
-            )}
-          >
-            <Icon size={12} strokeWidth={1.6} />
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 function AssetPreview({ asset }: { asset: BrandAsset }) {
   if (asset.type === "svg" && asset.content) {
@@ -112,7 +62,6 @@ function AssetPreview({ asset }: { asset: BrandAsset }) {
 
 export default function AssetsPage() {
   const profile = useBrandStore((s) => s.profile);
-  const [surface, setSurface] = React.useState<Surface>("paper");
 
   if (!profile || profile.assets.length === 0) {
     return (
@@ -164,9 +113,6 @@ export default function AssetsPage() {
               label: CATEGORY_LABELS[cat],
               content: (
                 <section>
-                  <div className="mb-4 flex justify-end">
-                    <SurfaceToggle value={surface} onChange={setSurface} />
-                  </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     {items.map((asset) => {
                       const specs = [
@@ -185,14 +131,7 @@ export default function AssetsPage() {
                           previewHeight={160}
                           previewClassName="p-0 overflow-hidden"
                           preview={
-                            <div
-                              className="flex h-full w-full items-center justify-center"
-                              style={
-                                surface === "transparent"
-                                  ? { background: CHECKERBOARD }
-                                  : undefined
-                              }
-                            >
+                            <div className="flex h-full w-full items-center justify-center">
                               <AssetPreview asset={asset} />
                             </div>
                           }

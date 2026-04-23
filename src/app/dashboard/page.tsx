@@ -51,9 +51,6 @@ export default function DashboardOverviewPage() {
           <p className="mt-2 text-[15px] text-[var(--text-secondary)]">
             We&apos;ve successfully rendered your design system.
           </p>
-          <p className="mt-0.5 text-[13px] text-[var(--text-tertiary)]">
-            {profile.repo.owner}/{profile.repo.name}
-          </p>
         </div>
         <p
           className="shrink-0 text-[13px] font-medium sm:pt-0.5 sm:text-right"

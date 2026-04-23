@@ -15,10 +15,6 @@ import {
 } from "@/components/dashboard/brand-token-page-layout";
 import { CompactColorTokenRow } from "@/components/dashboard/compact-color-token-row";
 import { brandDashboardCardRadius } from "@/components/ui/brand-card-tokens";
-import {
-  TokenSearchInput,
-  useDeferredQuery,
-} from "@/components/dashboard/token-page-kit";
 function filterPalette(
   all: BrandColor[],
   kind: "primary" | "secondary",
@@ -52,8 +48,6 @@ const HERO_DESC =
 
 export default function ColorsPage() {
   const profile = useBrandStore((s) => s.profile);
-  const [search, setSearch] = React.useState("");
-  const q = useDeferredQuery(search);
 
   const onCopyHex = React.useCallback(async (displayHex: string) => {
     try {
@@ -91,16 +85,9 @@ export default function ColorsPage() {
     );
   }
 
-  const filtered = profile.colors.filter((c) => {
-    if (q && !`${c.name} ${c.value} ${c.cssVariable} ${c.hsl} ${c.rgb} ${c.group} ${c.oklch ?? ""}`.toLowerCase().includes(q)) {
-      return false;
-    }
-    return true;
-  });
-
-  const primary = filterPalette(filtered, "primary");
-  const secondary = filterPalette(filtered, "secondary");
-  const byGroup = filtered;
+  const primary = filterPalette(profile.colors, "primary");
+  const secondary = filterPalette(profile.colors, "secondary");
+  const byGroup = profile.colors;
 
   return (
     <BrandTokenPageLayout
@@ -116,12 +103,6 @@ export default function ColorsPage() {
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
       <div className="space-y-6">
-        <TokenSearchInput
-          value={search}
-          onValueChange={setSearch}
-          className="w-full min-w-0 sm:max-w-sm"
-        />
-
         <Tabs defaultValue="primary" className="w-full max-w-full">
           <TabsList variant="pill" className="h-auto w-full max-w-md">
             <TabsTrigger value="primary">Curated: Primary</TabsTrigger>

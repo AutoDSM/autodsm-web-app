@@ -1,5 +1,4 @@
 import * as React from "react";
-import { Sparkles } from "lucide-react";
 import { PageTypeIconFrame } from "@/components/ui/page-type-icon-frame";
 import { dashboardMainContentClassName } from "@/lib/dashboard-content-layout";
 import { timeAgo } from "@/lib/format-time";
@@ -45,16 +44,6 @@ export function BrandTokenPageHero({ title, description, icon, className }: Bran
           description
         )}
       </div>
-    </div>
-  );
-}
-
-/** Sparkles + muted provenance line (e.g. “Auto-extracted from …” or a custom count line). */
-export function TokenPageProvenanceLine({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-1.5 text-[12px] text-[var(--text-tertiary)]">
-      <Sparkles size={14} strokeWidth={1.5} className="shrink-0" aria-hidden />
-      <span style={{ fontFamily: "var(--font-geist-sans)" }}>{children}</span>
     </div>
   );
 }

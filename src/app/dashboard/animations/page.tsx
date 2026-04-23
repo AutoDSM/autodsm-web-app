@@ -167,12 +167,10 @@ function EmptyTabStrip({ children }: { children: React.ReactNode }) {
 function MotionGrid({
   list,
   ticks,
-  allTick,
   replay,
 }: {
   list: BrandAnimation[];
   ticks: Record<string, number>;
-  allTick: number;
   replay: (name: string) => void;
 }) {
   if (list.length === 0) {
@@ -197,7 +195,7 @@ function MotionGrid({
             preview={
               <AnimatedPreview
                 anim={anim}
-                nonce={(ticks[anim.name] ?? 0) + allTick}
+                nonce={ticks[anim.name] ?? 0}
               />
             }
             name={anim.name}
@@ -243,15 +241,9 @@ function MotionGrid({
 export default function AnimationsPage() {
   const profile = useBrandStore((s) => s.profile);
   const [ticks, setTicks] = React.useState<Record<string, number>>({});
-  const [allTick, setAllTick] = React.useState(0);
 
   const replay = React.useCallback((name: string) => {
     setTicks((t) => ({ ...t, [name]: (t[name] ?? 0) + 1 }));
-  }, []);
-
-  const replayAll = React.useCallback(() => {
-    setAllTick((t) => t + 1);
-    setTicks({});
   }, []);
 
   if (!profile || profile.animations.length === 0) {
@@ -300,22 +292,9 @@ export default function AnimationsPage() {
               label: "Keyframes",
               content: (
                 <section>
-                  {keyframesList.length > 0 ? (
-                    <div className="mb-4 flex justify-end">
-                      <button
-                        type="button"
-                        onClick={replayAll}
-                        className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-2.5 text-[11px] font-medium text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-                      >
-                        <Play size={12} strokeWidth={1.6} />
-                        Play all
-                      </button>
-                    </div>
-                  ) : null}
                   <MotionGrid
                     list={keyframesList}
                     ticks={ticks}
-                    allTick={allTick}
                     replay={replay}
                   />
                 </section>
@@ -326,27 +305,12 @@ export default function AnimationsPage() {
               label: "Transitions",
               content: (
                 <section>
-                  <SectionHeading
-                    description="Duration and easing pairs extracted from your theme."
-                    action={
-                      transitionsList.length > 0 ? (
-                        <button
-                          type="button"
-                          onClick={replayAll}
-                          className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-2.5 text-[11px] font-medium text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-                        >
-                          <Play size={12} strokeWidth={1.6} />
-                          Play all
-                        </button>
-                      ) : undefined
-                    }
-                  >
+                  <SectionHeading description="Duration and easing pairs extracted from your theme.">
                     Transitions
                   </SectionHeading>
                   <MotionGrid
                     list={transitionsList}
                     ticks={ticks}
-                    allTick={allTick}
                     replay={replay}
                   />
                 </section>

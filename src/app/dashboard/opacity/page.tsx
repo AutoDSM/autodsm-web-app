@@ -13,10 +13,6 @@ import { SectionHeading } from "@/components/dashboard/section-heading";
 import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
 import { TokenCard } from "@/components/dashboard/token-card";
 import { brandDashboardCardRadius } from "@/components/ui/brand-card-tokens";
-import {
-  TokenSearchInput,
-  useDeferredQuery,
-} from "@/components/dashboard/token-page-kit";
 import { cn } from "@/lib/utils";
 
 const CHECKERBOARD = `repeating-conic-gradient(
@@ -29,8 +25,6 @@ const HERO_DESC =
 
 export default function OpacityPage() {
   const profile = useBrandStore((s) => s.profile);
-  const [q, setQ] = React.useState("");
-  const d = useDeferredQuery(q);
 
   if (!profile || profile.opacity.length === 0) {
     return (
@@ -53,12 +47,6 @@ export default function OpacityPage() {
   }
 
   const sorted = [...profile.opacity].sort((a, b) => a.value - b.value);
-  const filtered = sorted.filter((o) => {
-    if (!d) return true;
-    return `${o.name} ${o.percentage} ${o.value} ${o.source} opacity-${o.name}`
-      .toLowerCase()
-      .includes(d);
-  });
   return (
     <BrandTokenPageLayout
       hero={
@@ -71,12 +59,6 @@ export default function OpacityPage() {
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
       <div className="space-y-6">
-        <TokenSearchInput
-          value={q}
-          onValueChange={setQ}
-          className="ml-auto w-full max-w-xs"
-        />
-
         <TokenPagePillTabs
           defaultValue="scale"
           tabs={[
@@ -86,7 +68,7 @@ export default function OpacityPage() {
               content: (
                 <section>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    {filtered.map((o) => (
+                    {sorted.map((o) => (
                       <TokenCard
                         key={o.name + o.value}
                         eyebrow="OPACITY"
