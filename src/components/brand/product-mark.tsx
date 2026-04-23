@@ -3,16 +3,17 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-/** Natural SVG dimensions: Perplexity Computer wordmarks (`Logo-*-Text.svg`). */
+/** Perplexity Computer `Logo-*-Text.svg` — wordmark + mark in a single file (921×329). */
 const WORDMARK_NATURAL_W = 921;
 const WORDMARK_NATURAL_H = 329;
 
-/** Paths under `/public/brand`. */
+/**
+ * App brand SVGs. Only the Perplexity Computer `Logo-*-Text` wordmarks are used
+ * (light + dark for `next-themes`); no separate glyph mark.
+ */
 export const PRODUCT_BRAND = {
-  wordmarkLight: "/brand/autodsm-wordmark-light.svg",
-  wordmarkDark: "/brand/autodsm-wordmark-dark.svg",
-  iconLight: "/brand/autodsm-icon-light.svg",
-  iconDark: "/brand/autodsm-icon-dark.svg",
+  wordmarkLight: "/brand/perplexity-wordmark-light.svg",
+  wordmarkDark: "/brand/perplexity-wordmark-dark.svg",
 } as const;
 
 /**
@@ -57,7 +58,8 @@ export function ProductWordmark({
 }
 
 /**
- * Mark-only (app glyph). Light vs dark asset for correct contrast on token backgrounds.
+ * Scaled app mark using the same wordmark asset (921:329) — the only brand SVG
+ * in compact or inline contexts. `size` is the target height; width follows aspect ratio.
  */
 export function ProductIcon({
   size = 32,
@@ -68,23 +70,26 @@ export function ProductIcon({
   className?: string;
   priority?: boolean;
 }) {
+  const h = size;
+  const w = Math.round((size * WORDMARK_NATURAL_W) / WORDMARK_NATURAL_H);
+
   return (
     <span className={cn("inline-flex shrink-0", className)} aria-hidden>
       <Image
-        src={PRODUCT_BRAND.iconLight}
+        src={PRODUCT_BRAND.wordmarkLight}
         alt=""
-        width={size}
-        height={size}
+        width={w}
+        height={h}
         priority={priority}
-        className="block shrink-0 object-contain dark:hidden"
+        className="block h-auto w-auto max-w-full object-contain object-left dark:hidden"
       />
       <Image
-        src={PRODUCT_BRAND.iconDark}
+        src={PRODUCT_BRAND.wordmarkDark}
         alt=""
-        width={size}
-        height={size}
+        width={w}
+        height={h}
         priority={priority}
-        className="hidden shrink-0 object-contain dark:block"
+        className="hidden h-auto w-auto max-w-full object-contain object-left dark:block"
       />
     </span>
   );

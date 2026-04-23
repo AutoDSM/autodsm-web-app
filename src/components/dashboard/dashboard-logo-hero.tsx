@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
-import { ProductIcon } from "@/components/brand/product-mark";
+import { ProductWordmark } from "@/components/brand/product-mark";
 import type { BrandAsset, BrandProfile } from "@/lib/brand/types";
 import { cn } from "@/lib/utils";
 
@@ -64,11 +64,12 @@ export function DashboardLogoHero({
             priority
           />
         ) : (
-          <div className="flex items-center gap-3 text-[var(--text-primary)]">
-            <ProductIcon size={32} priority />
-            <span className="text-[20px] font-semibold tracking-tight" style={{ fontFamily: "var(--font-geist-sans)" }}>
-              {title}
-            </span>
+          <div className="flex w-full max-w-[720px] items-center justify-center">
+            {/*
+              Same asset as `Logo-*-Text.svg` (perplexity-wordmark-*) — no separate purple glyph;
+              project name is shown in the page heading above.
+            */}
+            <ProductWordmark width={420} priority className="max-w-full" />
           </div>
         )}
       </div>
