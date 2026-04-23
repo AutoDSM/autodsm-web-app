@@ -9,8 +9,8 @@ const WORDMARK_NATURAL_H = 329;
 
 /** Paths under `/public/brand`. */
 export const PRODUCT_BRAND = {
-  wordmarkLight: "/brand/perplexity-wordmark-light.svg",
-  wordmarkDark: "/brand/perplexity-wordmark-dark.svg",
+  wordmarkLight: "/brand/autodsm-wordmark-light.svg",
+  wordmarkDark: "/brand/autodsm-wordmark-dark.svg",
   iconLight: "/brand/autodsm-icon-light.svg",
   iconDark: "/brand/autodsm-icon-dark.svg",
 } as const;
