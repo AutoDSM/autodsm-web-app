@@ -33,6 +33,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { normalizeRepoInput } from "@/lib/utils";
+import { DEFAULT_DASHBOARD_APP_BASE_PATH } from "@/components/shell/dashboard-app-context";
 
 // ── card wrapper ──────────────────────────────────────────────────────────────
 
@@ -192,7 +193,7 @@ export default function SettingsPage() {
     }
   }
 
-  async function refreshScan() {
+  async function refreshScan(opts?: { redirectToDashboard?: boolean }) {
     try {
       const res = await fetch("/api/scan/refresh", { method: "POST" });
       const json = await res.json().catch(() => null);
@@ -200,8 +201,12 @@ export default function SettingsPage() {
         const err = json?.error ?? "Could not refresh scan";
         throw new Error(typeof err === "string" ? err : "Could not refresh scan");
       }
+      if (opts?.redirectToDashboard) {
+        // Full reload so `loadMyBrand`, `BrandProvider`, and client stores match the new active repo.
+        window.location.assign(DEFAULT_DASHBOARD_APP_BASE_PATH);
+        return;
+      }
       toast.success("Scan refresh started");
-      // force server components (dashboard layout + brand load) to revalidate on next nav
       router.refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not refresh scan");
@@ -229,9 +234,7 @@ export default function SettingsPage() {
       }
       toast.success(`Connected ${nextOwner}/${nextName}`);
       setRepoDialogOpen(false);
-      // Immediately scan the newly connected repo
-      await refreshScan();
-      router.refresh();
+      await refreshScan({ redirectToDashboard: true });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not connect repository");
     } finally {
@@ -449,7 +452,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" size="sm" onClick={refreshScan}>
+            <Button variant="secondary" size="sm" type="button" onClick={() => void refreshScan()}>
               Refresh scan
             </Button>
             <Dialog open={repoDialogOpen} onOpenChange={setRepoDialogOpen}>

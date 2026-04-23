@@ -1,20 +1,31 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+export type DashboardOptionTileAccentFill = {
+  baseOpacity: number;
+  hoverOpacity: number;
+};
 
 export function DashboardOptionTile({
   href,
   label,
   Icon,
   className,
+  accentFill,
 }: {
   href: string;
   label: string;
   Icon: LucideIcon;
   className?: string;
+  /** From `primaryAccentFillOpacity(pickProjectTintColor(profile))` on the overview. */
+  accentFill: DashboardOptionTileAccentFill;
 }) {
+  const { baseOpacity, hoverOpacity } = accentFill;
+
   return (
     <Link
       href={href}
@@ -25,12 +36,17 @@ export function DashboardOptionTile({
         "hover:brightness-[1.01] active:scale-[0.995]",
         className,
       )}
+      style={
+        {
+          "--dashboard-tile-accent-fill": String(baseOpacity),
+          "--dashboard-tile-accent-fill-hover": String(hoverOpacity),
+        } as CSSProperties
+      }
       aria-label={`${label} tokens`}
     >
       {/*
         Reference: `Token-Card-Small.svg` — top stage + label. Golden-ratio stage (ϕ:1).
-        Full tile (stage + label) is the single click target. Accent layer: 0.04 base, 0.08 on hover
-        (smooth opacity transition) over `--bg-elevated`.
+        Accent wash opacity comes from `primaryAccentFillOpacity` (see lib).
       */}
       <div
         className={cn(
@@ -42,8 +58,8 @@ export function DashboardOptionTile({
         <div
           className={cn(
             "pointer-events-none absolute inset-0 rounded-2xl bg-[var(--accent)]",
-            "opacity-[0.04] transition-opacity duration-200 [transition-timing-function:var(--ease-standard)]",
-            "group-hover:opacity-[0.08]",
+            "opacity-[var(--dashboard-tile-accent-fill)] transition-opacity duration-200 [transition-timing-function:var(--ease-standard)]",
+            "group-hover:opacity-[var(--dashboard-tile-accent-fill-hover)]",
           )}
           aria-hidden
         />

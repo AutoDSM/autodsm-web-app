@@ -1,7 +1,10 @@
 "use client";
 
+import * as React from "react";
 import { Sparkles } from "lucide-react";
 import { useBrandStore } from "@/stores/brand";
+import { primaryAccentFillOpacity } from "@/lib/brand/primary-accent-fill-opacity";
+import { pickProjectTintColor } from "@/lib/brand/product-tint";
 import { BRAND_CATEGORIES, CATEGORY_LABELS, countCategory, type BrandCategory } from "@/lib/brand/types";
 import { timeAgo } from "@/lib/format-time";
 import { dashboardMainContentClassName } from "@/lib/dashboard-content-layout";
@@ -18,6 +21,11 @@ const ACCENT_HEX = "#9D11FF";
 export default function DashboardOverviewPage() {
   const appBasePath = useDashboardAppBasePath();
   const profile = useBrandStore((s) => s.profile);
+
+  const accentFill = React.useMemo(
+    () => primaryAccentFillOpacity(pickProjectTintColor(profile)),
+    [profile],
+  );
 
   /*
    * While `profile` is briefly null on the client before `BrandProvider` hydrates
@@ -90,6 +98,7 @@ export default function DashboardOverviewPage() {
                   href={`${appBasePath}/${token}`}
                   label={label}
                   Icon={Icon}
+                  accentFill={accentFill}
                 />
               );
             })}

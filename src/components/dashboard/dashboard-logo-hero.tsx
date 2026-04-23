@@ -3,7 +3,6 @@
 import * as React from "react";
 import Image from "next/image";
 import { ProductWordmark } from "@/components/brand/product-mark";
-import { useAppMarkVariant } from "@/components/shell/dashboard-app-context";
 import type { BrandAsset, BrandProfile } from "@/lib/brand/types";
 import { cn } from "@/lib/utils";
 
@@ -33,34 +32,8 @@ export function DashboardLogoHero({
   profile: BrandProfile;
   className?: string;
 }) {
-  const markVariant = useAppMarkVariant();
   const best = React.useMemo(() => pickBestLogo(profile.assets), [profile.assets]);
   const title = profile.meta.projectName ?? profile.repo.name ?? "Project";
-
-  if (markVariant === "autodsm") {
-    // height = 36% of width (100:36) fills the main column (`dashboardMainContentClassName` max width); wordmark capped (see `autodsm-wordmark-*.svg`).
-    return (
-      <section
-        className={cn("w-full min-w-0", className)}
-        aria-label="autoDSM product"
-      >
-        <div
-          className={cn(
-            "mx-auto flex w-full min-w-0 max-w-full items-center justify-center overflow-hidden",
-            "bg-[var(--bg-canvas)] p-8",
-            "rounded-[12px] aspect-[100/36]",
-          )}
-        >
-          <ProductWordmark
-            width={300}
-            priority
-            className="h-auto w-full max-w-[300px] shrink-0"
-            variant="autodsm"
-          />
-        </div>
-      </section>
-    );
-  }
 
   return (
     <section
@@ -92,10 +65,6 @@ export function DashboardLogoHero({
           />
         ) : (
           <div className="flex w-full max-w-[720px] items-center justify-center">
-            {/*
-              Same asset as `Logo-*-Text.svg` (perplexity-wordmark-*) — no separate purple glyph;
-              project name is shown in the page heading above.
-            */}
             <ProductWordmark width={420} priority className="max-w-full" />
           </div>
         )}
