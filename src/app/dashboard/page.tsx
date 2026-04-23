@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { useBrandStore } from "@/stores/brand";
-import { BRAND_CATEGORIES, countCategory, type BrandCategory } from "@/lib/brand/types";
+import { BRAND_CATEGORIES, CATEGORY_LABELS, countCategory, type BrandCategory } from "@/lib/brand/types";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
-import { DashboardCard } from "@/components/ui/dashboard-card";
 import { timeAgo } from "@/lib/format-time";
 import { dashboardMainContentClassName } from "@/lib/dashboard-content-layout";
+import { DashboardLogoHero } from "@/components/dashboard/dashboard-logo-hero";
+import { DashboardOptionTile } from "@/components/dashboard/dashboard-option-tile";
+import { DASHBOARD_CATEGORY_ICONS } from "@/lib/dashboard-category-icons";
 
 const ACCENT_HEX = "#9D11FF";
 
@@ -39,12 +41,13 @@ export default function DashboardOverviewPage() {
   const activeTokens = BRAND_CATEGORIES.filter(
     (c) => countCategory(profile, c) > 0,
   ) as BrandCategory[];
+  const cols = activeTokens.length < 9 ? 4 : 5;
 
   return (
     <div className={dashboardMainContentClassName}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-h1 text-[var(--text-primary)]">Your GitHub project</h1>
+          <h1 className="text-h1 text-[var(--text-primary)]">{profile.meta.projectName ?? "Your GitHub project"}</h1>
           <p className="mt-2 text-[15px] text-[var(--text-secondary)]">
             We&apos;ve successfully rendered your design system.
           </p>
@@ -65,6 +68,10 @@ export default function DashboardOverviewPage() {
         </p>
       </div>
 
+      <div className="mt-8 sm:mt-10">
+        <DashboardLogoHero profile={profile} />
+      </div>
+
       <section className="mt-10 sm:mt-12">
         <h2
           className="mb-4 text-[15px] font-semibold leading-snug tracking-tight text-[var(--text-primary)] sm:mb-5 sm:text-base"
@@ -76,10 +83,24 @@ export default function DashboardOverviewPage() {
             No token categories have data yet. Re-run a scan after adding styles to your repository.
           </p>
         ) : (
-          <div className="grid grid-cols-1 items-start gap-6 sm:grid-cols-2 sm:gap-7">
-            {activeTokens.map((token) => (
-              <DashboardCard key={token} token={token} />
-            ))}
+          <div
+            className={[
+              "grid grid-cols-2 items-start gap-4",
+              cols === 4 ? "sm:grid-cols-4" : "sm:grid-cols-5",
+            ].join(" ")}
+          >
+            {activeTokens.map((token) => {
+              const label = CATEGORY_LABELS[token] ?? token;
+              const Icon = DASHBOARD_CATEGORY_ICONS[token] ?? Sparkles;
+              return (
+                <DashboardOptionTile
+                  key={token}
+                  href={`/dashboard/${token}`}
+                  label={label}
+                  Icon={Icon}
+                />
+              );
+            })}
           </div>
         )}
       </section>
