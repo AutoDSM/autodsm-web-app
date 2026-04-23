@@ -33,12 +33,13 @@ function spacingTier(px: number): "Tiny" | "Small" | "Medium" | "Large" {
 
 function matchesQuery(s: BrandSpacing, q: string): boolean {
   if (!q) return true;
+  const classes = Array.isArray(s.tailwindClasses) ? s.tailwindClasses : [];
   const pool = [
     s.name,
     s.rem,
     String(s.px),
     s.source,
-    ...s.tailwindClasses,
+    ...classes,
   ]
     .join(" ")
     .toLowerCase();
@@ -104,7 +105,8 @@ export default function SpacingPage() {
   const sp6 = spacingMap["6"] ?? spacingMap["5"] ?? sp4;
 
   const classPreview = (s: BrandSpacing) => {
-    const t = s.tailwindClasses;
+    const t = Array.isArray(s.tailwindClasses) ? s.tailwindClasses : [];
+    if (t.length === 0) return "—";
     if (t.length <= 2) return t.join(" · ");
     return `${t[0]} · ${t[1]} · +${t.length - 2}`;
   };
