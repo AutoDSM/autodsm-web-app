@@ -8,6 +8,17 @@
 // ── Orchestrator ──────────────────────────────────────────────────────────────
 export { buildBrandProfile } from "./build-profile";
 export type { BuildProfileInput } from "./build-profile";
+export { EXTRACTOR_VERSION } from "./extractor-version";
+export { buildSpacing } from "./spacing";
+export { buildShadows, parseShadowLayers } from "./shadows";
+export { buildRadii } from "./radii";
+export { buildBorders } from "./borders";
+export { buildOpacity } from "./opacity";
+export { buildZIndex, inferZIndexRole } from "./zindex";
+export { parseGradient, extractGradientsFromCss } from "./gradients";
+export { buildAnimations } from "./animations";
+export { buildTypography, buildBreakpoints } from "./typography-extract";
+export { dedupeByName, isCssColor, remToPx, pxToRem } from "./extract-helpers";
 
 // ── Color utilities ───────────────────────────────────────────────────────────
 export {

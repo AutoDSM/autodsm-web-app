@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+:root {
+  --primary: #6366f1;
+  --border: 1px solid #e5e7eb;
+}
+
+@layer base {
+  .dark {
+    --background: 222 14% 10%;
+  }
+}

@@ -35,6 +35,7 @@ export interface ParsedTailwindTheme {
   borderRadius: ThemeValueMap;
   borderWidth: ThemeValueMap;
   borderColor: ThemeValueMap;
+  borderStyle: ThemeValueMap;
   opacity: ThemeValueMap;
   zIndex: ThemeValueMap;
   screens: ThemeValueMap;
@@ -59,6 +60,7 @@ const EMPTY_THEME = (): ParsedTailwindTheme => ({
   borderRadius: {},
   borderWidth: {},
   borderColor: {},
+  borderStyle: {},
   opacity: {},
   zIndex: {},
   screens: {},
@@ -181,6 +183,16 @@ export const TAILWIND_DEFAULTS: ParsedTailwindTheme = {
     "2": "2px",
     "4": "4px",
     "8": "8px",
+  },
+  borderColor: {
+    current: "currentColor",
+  },
+  borderStyle: {
+    solid: "solid",
+    dashed: "dashed",
+    dotted: "dotted",
+    double: "double",
+    none: "none",
   },
   opacity: {
     "0": "0",
@@ -350,6 +362,7 @@ const THEME_KEYS: Array<keyof Omit<ParsedTailwindTheme, "_source">> = [
   "borderRadius",
   "borderWidth",
   "borderColor",
+  "borderStyle",
   "opacity",
   "zIndex",
   "screens",
