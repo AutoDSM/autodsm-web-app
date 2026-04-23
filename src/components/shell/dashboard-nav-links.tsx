@@ -13,7 +13,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBrandStore } from "@/stores/brand";
-import { SIDEBAR_SECTIONS, CATEGORY_LABELS } from "@/lib/brand/types";
+import {
+  SIDEBAR_SECTIONS,
+  CATEGORY_LABELS,
+  countCategory,
+  type BrandCategory,
+} from "@/lib/brand/types";
 import { DASHBOARD_CATEGORY_ICONS } from "@/lib/dashboard-category-icons";
 
 function SidebarNavIcon({
@@ -135,6 +140,12 @@ export function DashboardNavLinks({
         </div>
 
         {SIDEBAR_SECTIONS.map((section) => {
+          const visibleSlugs = section.items.filter((slug) => {
+            if (!profile) return true;
+            return countCategory(profile, slug as BrandCategory) > 0;
+          });
+          if (visibleSlugs.length === 0) return null;
+
           const open = openSections[section.label] ?? true;
           return (
             <div key={section.label} className="mt-5 first-of-type:mt-5">
@@ -158,16 +169,9 @@ export function DashboardNavLinks({
               </button>
               {open ? (
                 <div className="flex flex-col gap-0">
-                  {section.items.map((slug) => {
+                  {visibleSlugs.map((slug) => {
                     const Icon = DASHBOARD_CATEGORY_ICONS[slug] ?? LayoutDashboard;
                     const href = `/dashboard/${slug}`;
-                    const hasTokens = profile
-                      ? (() => {
-                          const key = slug === "zindex" ? "zIndex" : (slug as keyof typeof profile);
-                          const val = (profile as unknown as Record<string, unknown>)[key];
-                          return Array.isArray(val) && val.length > 0;
-                        })()
-                      : true;
                     return (
                       <NavLink
                         key={slug}
@@ -175,7 +179,6 @@ export function DashboardNavLinks({
                         label={CATEGORY_LABELS[slug]}
                         Icon={Icon}
                         active={isActive(href)}
-                        muted={!hasTokens}
                         onNavigate={onNavigate}
                       />
                     );

@@ -2,6 +2,7 @@
 
 import { useBrandStore } from "@/stores/brand";
 import type { BrandProfile } from "@/lib/brand/types";
+import { ProductTintRoot } from "./product-tint-root";
 
 /**
  * Hydrates the client-side brand store with server-fetched props.
@@ -26,5 +27,5 @@ export function BrandProvider({
     repoSlug: resolvedRepoSlug,
   });
 
-  return <>{children}</>;
+  return <ProductTintRoot profile={profile}>{children}</ProductTintRoot>;
 }

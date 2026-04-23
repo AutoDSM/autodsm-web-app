@@ -1,34 +1,18 @@
 import "server-only";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { normalizeRepoInput } from "@/lib/utils";
 import { runRepoScan } from "@/lib/scan/run-repo-scan";
+import type { BrandProfile } from "@/lib/brand/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 /**
- * POST /api/scan
- * Body: { repo: "owner/name" OR full GitHub URL, projectName?: string }
+ * POST /api/scan/refresh
+ * Re-runs the extraction for the user’s most recently connected repository
+ * (latest `brand_repos` row by `created_at`, matching `loadMyBrand`).
  */
-export async function POST(req: NextRequest) {
-  let body: { repo?: string; projectName?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
-
-  const slug = normalizeRepoInput(body.repo ?? "");
-  if (!slug) {
-    return NextResponse.json(
-      { error: "Invalid repo. Use 'owner/name' or a GitHub URL." },
-      { status: 400 }
-    );
-  }
-  const [owner, name] = slug.split("/");
-  const projectName = (body.projectName ?? "").trim() || name;
-
+export async function POST() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -37,16 +21,40 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  const { data: repoRow, error: repoErr } = await supabase
+    .from("brand_repos")
+    .select("owner,name,brand_profile")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (repoErr) {
+    return NextResponse.json(
+      { error: "Could not load repository: " + repoErr.message },
+      { status: 500 }
+    );
+  }
+  if (!repoRow?.owner || !repoRow.name) {
+    return NextResponse.json(
+      { error: "No connected repository. Connect a repo from onboarding first." },
+      { status: 400 }
+    );
+  }
+
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
+  const profile = (repoRow.brand_profile as BrandProfile | null) ?? null;
+  const projectName =
+    profile?.meta?.projectName?.trim() || repoRow.name;
+
   const scanLog = (event: string, fields?: Record<string, string | undefined>) => {
     if (process.env.NODE_ENV === "development") {
-      console.info("[scan]", event, fields ?? "");
+      console.info("[scan/refresh]", event, fields ?? "");
     } else {
-      const safe = { event, ...fields };
-      console.info(`[scan] ${JSON.stringify(safe)}`);
+      console.info(`[scan/refresh] ${JSON.stringify({ event, ...fields })}`);
     }
   };
 
@@ -68,8 +76,8 @@ export async function POST(req: NextRequest) {
   );
 
   const result = await runRepoScan(supabase, user, session, {
-    owner,
-    name,
+    owner: repoRow.owner,
+    name: repoRow.name,
     projectName,
     scanLog,
     markScanError,
@@ -79,11 +87,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(result.body, { status: result.status });
   }
   if (result.kind === "unsupported") {
-    return NextResponse.json(result.body, { status: 200 });
+    return NextResponse.json({ ...result.body, refreshed: false }, { status: 200 });
   }
   return NextResponse.json({
     status: "completed",
     owner: result.owner,
     name: result.name,
+    durationMs: result.durationMs,
   });
 }

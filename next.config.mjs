@@ -41,6 +41,15 @@ const nextConfig = {
   // Pin tracing to this app root so a parent-folder lockfile (e.g. monorepo / home)
   // does not confuse Next.js or Vercel about where package.json lives.
   outputFileTracingRoot: path.join(__dirname),
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+    ],
+  },
   reactStrictMode: true,
   typedRoutes: false,
   // V1 preview: type/lint errors don't block the build. Runtime correctness is

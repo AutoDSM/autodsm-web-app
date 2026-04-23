@@ -9,3 +9,15 @@ out
 .vercel
 tsconfig.tsbuildinfo
 coverage
+
+# Supabase CLI local metadata (project ref, pooler URL, linked project, versions)
+supabase/.temp/
+supabase/.branches/
+
+# Per-machine agent / IDE tooling (skills, MCP config, skill locks)
+.agents/
+.claude/
+.cursor/
+.kiro/
+skills/
+skills-lock.json

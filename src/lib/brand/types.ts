@@ -70,7 +70,8 @@ export interface BrandFont {
 
 export interface BrandSpacing {
   name: string;
-  tailwindClass: string;
+  /** Common Tailwind utilities that map to this spacing step (e.g. p-4, m-4, gap-4). */
+  tailwindClasses: string[];
   rem: string;
   px: number;
   source: string;
@@ -84,6 +85,8 @@ export interface ShadowLayer {
   spread: string;
   color: string;
   colorHex: string;
+  /** When `color` is a `var(--token)` */
+  colorVarRef?: string;
   inset: boolean;
 }
 
@@ -92,6 +95,8 @@ export interface BrandShadow {
   tailwindClass: string;
   value: string;
   layers: ShadowLayer[];
+  /** `var(--…)` used in this shadow, deduped. */
+  tokenRefs?: string[];
   source: string;
   isCustom: boolean;
 }
@@ -113,6 +118,8 @@ export interface BrandBorder {
   color: string;
   colorToken?: string;
   source: string;
+  /** Where the token was derived from for grouped UI. */
+  borderGroup?: "source" | "width" | "color" | "style";
 }
 
 export interface BrandAnimation {
@@ -188,6 +195,10 @@ export interface BrandProfileMeta {
   tailwindVersion: "3" | "4" | null;
   /** User-facing label captured during onboarding (shown in the sidebar). */
   projectName?: string;
+  /** Increments when extractor output changes; used for re-scan prompts. */
+  extractorVersion?: number;
+  /** Wall-clock time of the last successful scan (ms), when recorded. */
+  lastScanDurationMs?: number;
 }
 
 export interface BrandProfile {

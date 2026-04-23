@@ -53,11 +53,19 @@ export function CompactColorTokenRow({ color, onCopyHex }: CompactColorTokenRowP
                 {displayHex}
               </span>
               <span className="rounded-md bg-muted px-2 py-0.5 font-mono">{color.rgb}</span>
+              {color.oklch ? (
+                <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-[10px]">{color.oklch}</span>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-2 text-[11px]">
+              {color.wcagAANormal ? <Badge variant="outline">AA text</Badge> : null}
+              {color.wcagAAA ? <Badge variant="outline">AAA</Badge> : null}
             </div>
             <div className="flex flex-wrap gap-3 border-t border-[var(--border-subtle)] pt-3">
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px]">
                 <CopyButton value={color.rgb} label="RGB" iconSize={12} />
                 <CopyButton value={color.hsl} label="HSL" iconSize={12} />
+                {color.oklch ? <CopyButton value={color.oklch} label="OKLCH" iconSize={12} /> : null}
               </div>
             </div>
             {color.darkModeHex && color.darkModeHex !== color.value ? (

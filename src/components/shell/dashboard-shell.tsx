@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { RescanBanner } from "@/components/dashboard/token-page-kit";
 
 function ShellTopBar({ userLabel }: { userLabel?: string }) {
   const { sidebarCollapsed, toggleSidebar } = useDashboardShell();
@@ -161,6 +162,7 @@ export function DashboardShell({
             <div className="flex min-h-0 min-w-0 flex-1 flex-col justify-center overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] shadow-[var(--shadow-sm)]">
               <TopBar />
               <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
+                <RescanBanner />
                 {children}
               </div>
             </div>
