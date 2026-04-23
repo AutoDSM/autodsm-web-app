@@ -3,9 +3,13 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-/** Perplexity Computer `Logo-*-Text.svg` — wordmark + mark in a single file (921×329). */
-const WORDMARK_NATURAL_W = 921;
-const WORDMARK_NATURAL_H = 329;
+export type ProductWordmarkVariant = "perplexity" | "autodsm";
+
+const WORDMARK_DIMS: Record<ProductWordmarkVariant, { w: number; h: number }> = {
+  perplexity: { w: 921, h: 329 },
+  /** `public/brand/autodsm-wordmark-*.svg` — full mark (LightMode / DarkMode), 921×329 */
+  autodsm: { w: 921, h: 329 },
+};
 
 /**
  * App brand SVGs. Only the Perplexity Computer `Logo-*-Text` wordmarks are used
@@ -16,38 +20,49 @@ export const PRODUCT_BRAND = {
   wordmarkDark: "/brand/perplexity-wordmark-dark.svg",
 } as const;
 
+/** Core `autoDSM` wordmarks — used on `/demo` and design-system surfaces, distinct from in-app Perplexity marks. */
+export const AUTODSM_PRODUCT_BRAND = {
+  wordmarkLight: "/brand/autodsm-wordmark-light.svg",
+  wordmarkDark: "/brand/autodsm-wordmark-dark.svg",
+} as const;
+
 /**
- * Full Perplexity Computer wordmark. Light vs dark follows `next-themes` (`class` on `html`).
- * Height is derived from width so the 921×329 asset is never stretched.
+ * Full product wordmark. Default variant is Perplexity; `autodsm` uses 921×329 `autodsm-wordmark-*.svg` (LightMode / DarkMode).
+ * Height is derived from width from each variant’s natural aspect ratio.
  */
 export function ProductWordmark({
   width = 160,
   height: heightOverride,
   priority,
   className,
+  variant = "perplexity",
 }: {
   width?: number;
   /** Prefer leaving unset; if set, must match 921:329 or layout may clip. */
   height?: number;
   priority?: boolean;
   className?: string;
+  /** `autodsm` = core app wordmark on public `/demo`; default matches production app marketing. */
+  variant?: ProductWordmarkVariant;
 }) {
-  const height =
-    heightOverride ?? Math.round((width * WORDMARK_NATURAL_H) / WORDMARK_NATURAL_W);
+  const { w: nw, h: nh } = WORDMARK_DIMS[variant];
+  const height = heightOverride ?? Math.round((width * nh) / nw);
+  const assets = variant === "autodsm" ? AUTODSM_PRODUCT_BRAND : PRODUCT_BRAND;
+  const alt = variant === "autodsm" ? "autoDSM" : "Perplexity Computer";
 
   return (
     <span className={cn("inline-flex items-center shrink-0", className)}>
       <Image
-        src={PRODUCT_BRAND.wordmarkLight}
-        alt="Perplexity Computer"
+        src={assets.wordmarkLight}
+        alt={alt}
         width={width}
         height={height}
         priority={priority}
         className="block h-auto max-w-full dark:hidden"
       />
       <Image
-        src={PRODUCT_BRAND.wordmarkDark}
-        alt="Perplexity Computer"
+        src={assets.wordmarkDark}
+        alt={alt}
         width={width}
         height={height}
         priority={priority}
@@ -65,18 +80,22 @@ export function ProductIcon({
   size = 32,
   className,
   priority,
+  variant = "perplexity",
 }: {
   size?: number;
   className?: string;
   priority?: boolean;
+  variant?: ProductWordmarkVariant;
 }) {
+  const { w: nw, h: nh } = WORDMARK_DIMS[variant];
   const h = size;
-  const w = Math.round((size * WORDMARK_NATURAL_W) / WORDMARK_NATURAL_H);
+  const w = Math.round((size * nw) / nh);
+  const assets = variant === "autodsm" ? AUTODSM_PRODUCT_BRAND : PRODUCT_BRAND;
 
   return (
     <span className={cn("inline-flex shrink-0", className)} aria-hidden>
       <Image
-        src={PRODUCT_BRAND.wordmarkLight}
+        src={assets.wordmarkLight}
         alt=""
         width={w}
         height={h}
@@ -84,7 +103,7 @@ export function ProductIcon({
         className="block h-auto w-auto max-w-full object-contain object-left dark:hidden"
       />
       <Image
-        src={PRODUCT_BRAND.wordmarkDark}
+        src={assets.wordmarkDark}
         alt=""
         width={w}
         height={h}

@@ -2,7 +2,8 @@ import type { BrandProfile } from "./types";
 import { EXTRACTOR_VERSION } from "@/lib/extract/extractor-version";
 
 /**
- * Synthetic BrandProfile for local UI preview (DEV_AUTH_BYPASS).
+ * Synthetic BrandProfile for local UI preview (DEV_AUTH_BYPASS) and test/Preview
+ * dashboard bypass (see isTestDashboardBypassEnabled and `docs/E2E_PREVIEW.md`).
  * Mirrors `buildBrandProfile` field shapes; ≥3 entries per array where applicable.
  */
 export function buildDemoBrandProfile(owner: string, name: string): BrandProfile {
@@ -352,5 +353,14 @@ export function buildDemoBrandProfile(owner: string, name: string): BrandProfile
         fileSizeFormatted: "512 B",
       },
     ],
+  };
+}
+
+/** Public `/demo` route: same shape as `buildDemoBrandProfile`, stable “AutoDSM” product label. */
+export function buildAutodsmProductDemoProfile(): BrandProfile {
+  const p = buildDemoBrandProfile("autodsm", "product-demo");
+  return {
+    ...p,
+    meta: { ...p.meta, projectName: "AutoDSM" },
   };
 }

@@ -3,13 +3,15 @@
 import * as React from "react";
 import { usePathname } from "next/navigation";
 import { CATEGORY_LABELS } from "@/lib/brand/types";
+import { useDashboardAppBasePath } from "@/components/shell/dashboard-app-context";
 
 /** Current dashboard tab title only (no repo slug in the chrome). */
-function sectionTitleFromPath(pathname: string): string {
+function sectionTitleFromPath(pathname: string, appBasePath: string): string {
+  const baseSeg = appBasePath.split("/").filter(Boolean)[0] ?? "dashboard";
   const segments = pathname.split("/").filter(Boolean);
   const lastSeg = segments[segments.length - 1] ?? "";
 
-  if (segments[0] !== "dashboard") {
+  if (segments[0] !== baseSeg) {
     return "Dashboard";
   }
   if (segments.length === 1) {
@@ -26,10 +28,11 @@ function sectionTitleFromPath(pathname: string): string {
 
 export function TopBar() {
   const pathname = usePathname();
-  const title = sectionTitleFromPath(pathname);
+  const appBasePath = useDashboardAppBasePath();
+  const title = sectionTitleFromPath(pathname, appBasePath);
 
   /** Agent uses a minimal hero + composer; repo title row would duplicate the shell chrome. */
-  if (pathname === "/dashboard/agent") {
+  if (pathname === `${appBasePath}/agent`) {
     return null;
   }
 

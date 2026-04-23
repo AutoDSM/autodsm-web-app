@@ -20,6 +20,7 @@ import {
   type BrandCategory,
 } from "@/lib/brand/types";
 import { DASHBOARD_CATEGORY_ICONS } from "@/lib/dashboard-category-icons";
+import { useDashboardAppBasePath } from "@/components/shell/dashboard-app-context";
 
 function SidebarNavIcon({
   icon: Icon,
@@ -106,6 +107,7 @@ export function DashboardNavLinks({
   userLabel?: string;
 }) {
   const pathname = usePathname();
+  const appBasePath = useDashboardAppBasePath();
   const profile = useBrandStore((s) => s.profile);
 
   const [openSections, setOpenSections] = React.useState<Record<string, boolean>>(() =>
@@ -113,7 +115,7 @@ export function DashboardNavLinks({
   );
 
   function isActive(href: string) {
-    if (href === "/dashboard") return pathname === "/dashboard";
+    if (href === appBasePath) return pathname === appBasePath;
     return pathname === href || pathname.startsWith(href + "/");
   }
 
@@ -122,18 +124,18 @@ export function DashboardNavLinks({
       <nav className="flex h-fit w-full flex-col gap-3">
         <div className="flex flex-col gap-0">
           <NavLink
-            href="/dashboard/agent"
+            href={`${appBasePath}/agent`}
             label="New agent"
             Icon={Pen}
-            active={isActive("/dashboard/agent")}
+            active={isActive(`${appBasePath}/agent`)}
             topLevel
             onNavigate={onNavigate}
           />
           <NavLink
-            href="/dashboard"
+            href={appBasePath}
             label="Dashboard"
             Icon={LayoutDashboard}
-            active={isActive("/dashboard")}
+            active={isActive(appBasePath)}
             topLevel
             onNavigate={onNavigate}
           />
@@ -171,7 +173,7 @@ export function DashboardNavLinks({
                 <div className="flex flex-col gap-0">
                   {visibleSlugs.map((slug) => {
                     const Icon = DASHBOARD_CATEGORY_ICONS[slug] ?? LayoutDashboard;
-                    const href = `/dashboard/${slug}`;
+                    const href = `${appBasePath}/${slug}`;
                     return (
                       <NavLink
                         key={slug}
@@ -192,10 +194,10 @@ export function DashboardNavLinks({
 
       <div className="mt-auto flex h-fit w-full shrink-0 flex-col pt-3">
         <NavLink
-          href="/dashboard/settings"
+          href={`${appBasePath}/settings`}
           label="Settings"
           Icon={SettingsIcon}
-          active={isActive("/dashboard/settings")}
+          active={isActive(`${appBasePath}/settings`)}
           topLevel
           onNavigate={onNavigate}
         />

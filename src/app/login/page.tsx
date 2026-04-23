@@ -187,6 +187,9 @@ function LoginForm() {
             >
               Preview onboarding (no auth)
             </Button>
+            <Button asChild variant="ghost" className="mt-2 w-full text-[13px] text-[var(--text-secondary)]">
+              <Link href="/demo">Open app demo (no auth)</Link>
+            </Button>
           </div>
         ) : null}
       </div>

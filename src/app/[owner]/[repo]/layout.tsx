@@ -55,7 +55,7 @@ export default async function PublicBrandLayout({
     <BrandProvider profile={brand.profile} repoSlug={brand.repoSlug}>
       <div className="min-h-screen bg-[var(--bg-primary)]">
         <PublicTopNav owner={owner} repo={repo} />
-        <main className="mx-auto max-w-[1080px] px-6 sm:px-10 py-12">
+        <main className="w-full min-w-0">
           {children}
         </main>
         <PublicFooter />

@@ -8,7 +8,6 @@ import {
   BrandTokenPageHero,
   BrandTokenPageLayout,
   LastUpdatedLabel,
-  TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
 import { SectionHeading } from "@/components/dashboard/section-heading";
 import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
@@ -68,8 +67,6 @@ export default function GradientsPage() {
     );
   }
 
-  const source = profile.meta.cssSource || profile.meta.tailwindConfigPath || "repo";
-
   return (
     <BrandTokenPageLayout
       hero={
@@ -82,10 +79,6 @@ export default function GradientsPage() {
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
       <div className="space-y-6">
-        <TokenPageProvenanceLine>
-          Auto-extracted from {source} · {profile.gradients.length} tokens
-        </TokenPageProvenanceLine>
-
         <TokenPagePillTabs
           defaultValue="gallery"
           tabs={[
@@ -94,9 +87,6 @@ export default function GradientsPage() {
               label: "Gallery",
               content: (
                 <section>
-                  <SectionHeading description="Previews are rendered at 140px height. Hover any stop chip to inspect its hex.">
-                    All gradients
-                  </SectionHeading>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     {profile.gradients.map((g) => (
                       <TokenCard

@@ -8,7 +8,6 @@ import {
   BrandTokenPageHero,
   BrandTokenPageLayout,
   LastUpdatedLabel,
-  TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
 import { SectionHeading } from "@/components/dashboard/section-heading";
 import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
@@ -277,7 +276,6 @@ export default function AnimationsPage() {
     );
   }
 
-  const source = profile.meta.cssSource || profile.meta.tailwindConfigPath || "repo";
   const keyframesList = profile.animations.filter((a) => a.type === "keyframes");
   const transitionsList = profile.animations.filter((a) => a.type === "transition");
   const defaultTab = keyframesList.length > 0 ? "keyframes" : "transitions";
@@ -294,10 +292,6 @@ export default function AnimationsPage() {
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
       <div className="space-y-6">
-        <TokenPageProvenanceLine>
-          Auto-extracted from {source} · {profile.animations.length} tokens
-        </TokenPageProvenanceLine>
-
         <TokenPagePillTabs
           defaultValue={defaultTab}
           tabs={[
@@ -306,23 +300,18 @@ export default function AnimationsPage() {
               label: "Keyframes",
               content: (
                 <section>
-                  <SectionHeading
-                    description="Previews are indicative — exact motion may vary based on where your app applies the token."
-                    action={
-                      keyframesList.length > 0 ? (
-                        <button
-                          type="button"
-                          onClick={replayAll}
-                          className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-2.5 text-[11px] font-medium text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-                        >
-                          <Play size={12} strokeWidth={1.6} />
-                          Play all
-                        </button>
-                      ) : undefined
-                    }
-                  >
-                    Keyframes
-                  </SectionHeading>
+                  {keyframesList.length > 0 ? (
+                    <div className="mb-4 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={replayAll}
+                        className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-2.5 text-[11px] font-medium text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+                      >
+                        <Play size={12} strokeWidth={1.6} />
+                        Play all
+                      </button>
+                    </div>
+                  ) : null}
                   <MotionGrid
                     list={keyframesList}
                     ticks={ticks}

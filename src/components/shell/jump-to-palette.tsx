@@ -35,17 +35,12 @@ import {
 } from "@/components/ui/dialog";
 import { CATEGORY_LABELS, SIDEBAR_SECTIONS } from "@/lib/brand/types";
 import { DASHBOARD_CATEGORY_ICONS } from "@/lib/dashboard-category-icons";
+import { useDashboardAppBasePath } from "@/components/shell/dashboard-app-context";
 import { cn } from "@/lib/utils";
 
 import styles from "./jump-to-palette.module.css";
 
 const ICON_STROKE = 1.75 as const;
-
-const QUICK: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/agent", label: "New agent", icon: Pen },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
-];
 
 function PaletteRowIcon({ icon: Icon }: { icon: LucideIcon }) {
   return (
@@ -91,6 +86,16 @@ export type JumpToPaletteProps = {
 
 export function JumpToPalette({ open, onOpenChange }: JumpToPaletteProps) {
   const router = useRouter();
+  const appBasePath = useDashboardAppBasePath();
+  const quick = React.useMemo(
+    () =>
+      [
+        { href: appBasePath, label: "Dashboard", icon: LayoutDashboard },
+        { href: `${appBasePath}/agent`, label: "New agent", icon: Pen },
+        { href: `${appBasePath}/settings`, label: "Settings", icon: Settings },
+      ] as { href: string; label: string; icon: LucideIcon }[],
+    [appBasePath],
+  );
 
   const go = React.useCallback(
     (href: string) => {
@@ -126,7 +131,7 @@ export function JumpToPalette({ open, onOpenChange }: JumpToPaletteProps) {
             <CommandEmpty>No results.</CommandEmpty>
 
             <CommandGroup heading="Quick">
-              {QUICK.map(({ href, label, icon: Icon }) => (
+              {quick.map(({ href, label, icon: Icon }) => (
                 <CommandItem
                   key={href}
                   value={`${label} ${href}`}
@@ -143,7 +148,7 @@ export function JumpToPalette({ open, onOpenChange }: JumpToPaletteProps) {
             {SIDEBAR_SECTIONS.map((section) => (
               <CommandGroup key={section.label} heading={section.label}>
                 {section.items.map((slug) => {
-                  const href = `/dashboard/${slug}`;
+                  const href = `${appBasePath}/${slug}`;
                   const label = CATEGORY_LABELS[slug];
                   const CategoryIcon = DASHBOARD_CATEGORY_ICONS[slug] ?? LayoutDashboard;
                   return (

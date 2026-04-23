@@ -8,7 +8,6 @@ import {
   BrandTokenPageHero,
   BrandTokenPageLayout,
   LastUpdatedLabel,
-  TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
 import { SectionHeading } from "@/components/dashboard/section-heading";
 import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
@@ -65,8 +64,6 @@ export default function ZIndexPage() {
       .toLowerCase()
       .includes(d);
   });
-  const source = profile.meta.tailwindConfigPath || profile.meta.cssSource || "repo";
-
   return (
     <BrandTokenPageLayout
       hero={
@@ -80,12 +77,11 @@ export default function ZIndexPage() {
     >
       <div className="space-y-6">
         <div className="flex flex-col gap-2">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <TokenPageProvenanceLine>
-              Auto-extracted from {source} · {sorted.length} tokens
-            </TokenPageProvenanceLine>
-            <TokenSearchInput value={q} onValueChange={setQ} className="w-full sm:max-w-xs" />
-          </div>
+          <TokenSearchInput
+            value={q}
+            onValueChange={setQ}
+            className="ml-auto w-full max-w-xs"
+          />
           {duplicateValues.length > 0 ? (
             <p className="text-[12px] text-amber-600 dark:text-amber-400" role="status">
               Same z-index value used {duplicateValues.length} time
@@ -103,9 +99,6 @@ export default function ZIndexPage() {
               label: "Stack",
               content: (
                 <section>
-                  <SectionHeading description="Layers are offset along both axes to preview their stacking order on a single surface.">
-                    Stack
-                  </SectionHeading>
                   <div
                     className={cn(
                       brandTokenSurface,

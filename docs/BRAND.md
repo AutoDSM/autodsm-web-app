@@ -155,4 +155,4 @@ Two branded animations:
 
 Use `ProductWordmark` / `ProductIcon` from [`src/components/brand/product-mark.tsx`](../src/components/brand/product-mark.tsx) so light/dark tracks `next-themes` (`class` on `html`). Do not recolor. `ProductWordmark` keeps the natural **921×329** aspect ratio from width alone.
 
-Legacy `autodsm-wordmark-*.svg` files may remain in the folder but are not used by `ProductWordmark`.
+For the **autodsm** `markVariant` (e.g. `/demo`), `autodsm-wordmark-light.svg` and `autodsm-wordmark-dark.svg` in `public/brand/` are the canonical full wordmarks (sourced from Logo-LightMode / Logo-DarkMode).

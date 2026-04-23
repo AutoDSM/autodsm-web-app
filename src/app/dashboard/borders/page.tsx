@@ -8,7 +8,6 @@ import {
   BrandTokenPageHero,
   BrandTokenPageLayout,
   LastUpdatedLabel,
-  TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
 import { SectionHeading } from "@/components/dashboard/section-heading";
 import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
@@ -57,9 +56,6 @@ export default function BordersPage() {
     );
   }
 
-  const source =
-    profile.meta.cssSource || profile.meta.tailwindConfigPath || "repo";
-
   return (
     <BrandTokenPageLayout
       hero={
@@ -79,10 +75,6 @@ export default function BordersPage() {
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
       <div className="space-y-6">
-        <TokenPageProvenanceLine>
-          Auto-extracted from {source} · {profile.borders.length} tokens
-        </TokenPageProvenanceLine>
-
         <TokenPagePillTabs
           defaultValue="overview"
           tabs={[
@@ -91,9 +83,6 @@ export default function BordersPage() {
               label: "Overview",
               content: (
                 <section>
-                  <SectionHeading description="How border tokens are extracted and how to use this page.">
-                    Overview
-                  </SectionHeading>
                   <div
                     className={cn(
                       brandDashboardCardRadius,

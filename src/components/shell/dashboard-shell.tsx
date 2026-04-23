@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { GitBranch, Menu, PanelLeft, PanelRight } from "lucide-react";
 import { DashboardShellProvider, useDashboardShell } from "./dashboard-shell-context";
 import { Sidebar } from "./sidebar";
@@ -18,6 +19,11 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { RescanBanner } from "@/components/dashboard/token-page-kit";
+import {
+  DashboardAppChromeProvider,
+  type AppMarkVariant,
+  DEFAULT_DASHBOARD_APP_BASE_PATH,
+} from "@/components/shell/dashboard-app-context";
 
 function ShellTopBar({ userLabel }: { userLabel?: string }) {
   const { sidebarCollapsed, toggleSidebar } = useDashboardShell();
@@ -147,12 +153,21 @@ function MobileSidebarFold() {
 export function DashboardShell({
   children,
   userLabel,
+  showPreviewOnboardingLink,
+  appBasePath = DEFAULT_DASHBOARD_APP_BASE_PATH,
+  markVariant = "perplexity",
 }: {
   children: React.ReactNode;
   userLabel?: string;
+  /** Vercel Preview + test-bypass: link to real onboarding (QA). */
+  showPreviewOnboardingLink?: boolean;
+  /** e.g. `/demo` for the public product demo; default `/dashboard`. */
+  appBasePath?: string;
+  markVariant?: AppMarkVariant;
 }) {
   return (
-    <DashboardShellProvider>
+    <DashboardAppChromeProvider appBasePath={appBasePath} markVariant={markVariant}>
+      <DashboardShellProvider>
       <MobileSidebarFold />
       <div className="flex h-[100dvh] max-h-[100dvh] min-h-0 flex-col overflow-hidden overflow-x-hidden bg-[var(--bg-canvas)]">
         <ShellTopBar userLabel={userLabel} />
@@ -162,6 +177,29 @@ export function DashboardShell({
             <div className="flex min-h-0 min-w-0 flex-1 flex-col justify-center overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] shadow-[var(--shadow-sm)]">
               <TopBar />
               <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
+                {showPreviewOnboardingLink ? (
+                  <div className="shrink-0 space-y-2 border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-2 sm:px-4 sm:py-2.5">
+                    <p className="text-center text-[12px] leading-snug text-[var(--text-secondary)] sm:text-[13px]">
+                      Preview: dashboard uses demo data. To test real onboarding, open{" "}
+                      <Link
+                        href="/onboarding/account"
+                        className="font-medium text-[var(--accent)] underline decoration-[var(--accent)]/30 underline-offset-2 hover:decoration-[var(--accent)]"
+                      >
+                        /onboarding
+                      </Link>
+                      .
+                    </p>
+                    <p className="text-center text-[12px] leading-snug text-[var(--text-tertiary)] sm:text-[13px]">
+                      Core UI strip without auth:{" "}
+                      <Link
+                        href="/demo"
+                        className="font-medium text-[var(--accent)] underline decoration-[var(--accent)]/30 underline-offset-2 hover:decoration-[var(--accent)]"
+                      >
+                        /demo
+                      </Link>
+                    </p>
+                  </div>
+                ) : null}
                 <RescanBanner />
                 {children}
               </div>
@@ -170,5 +208,6 @@ export function DashboardShell({
         </div>
       </div>
     </DashboardShellProvider>
+    </DashboardAppChromeProvider>
   );
 }

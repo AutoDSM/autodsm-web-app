@@ -4,12 +4,14 @@ import * as React from "react";
 import Link from "next/link";
 import { useBrandStore } from "@/stores/brand";
 import { countCategory } from "@/lib/brand/types";
+import { dashboardMainContentClassName } from "@/lib/dashboard-content-layout";
 import { EmptyState } from "@/components/ui/empty-state";
+import { cn } from "@/lib/utils";
 
 /**
  * Public Overview — PDF §12
- * Same data as authenticated dashboard overview but in a doc-style wrapper.
- * Shows hero metrics + preview strips that serve as entry points to each category.
+ * Same data as the in-app dashboard; uses `dashboardMainContentClassName` so width
+ * and padding match token pages and the authenticated shell’s main column.
  */
 export default function PublicOverviewPage() {
   const profile = useBrandStore((s) => s.profile);
@@ -21,10 +23,12 @@ export default function PublicOverviewPage() {
 
   if (!profile) {
     return (
-      <EmptyState
-        title="Brand book not ready"
-        description="This repository has not been scanned yet."
-      />
+      <div className={dashboardMainContentClassName}>
+        <EmptyState
+          title="Brand book not ready"
+          description="This repository has not been scanned yet."
+        />
+      </div>
     );
   }
 
@@ -73,7 +77,7 @@ export default function PublicOverviewPage() {
     .slice(0, 5);
 
   return (
-    <div className="pb-8">
+    <div className={cn(dashboardMainContentClassName, "pb-8")}>
       {/* Hero */}
       <section className="mb-14">
         <div

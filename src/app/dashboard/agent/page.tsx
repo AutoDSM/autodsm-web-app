@@ -99,7 +99,7 @@ export default function AgentPage() {
 
           <form
             onSubmit={handleSubmit}
-            className="mt-9 w-full min-w-0 max-w-[560px] sm:mt-10"
+            className="mt-4 w-full min-w-0 max-w-[560px]"
           >
             <PromptInput
               onSubmit={(value) => submitPrompt(value)}

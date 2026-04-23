@@ -8,9 +8,7 @@ import {
   BrandTokenPageHero,
   BrandTokenPageLayout,
   LastUpdatedLabel,
-  TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
-import { SectionHeading } from "@/components/dashboard/section-heading";
 import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
 import { TokenCard } from "@/components/dashboard/token-card";
 import { CopyButton } from "@/components/dashboard/token-page-kit";
@@ -144,9 +142,6 @@ function ShadowsElevationPanel({
 }) {
   return (
     <section>
-      <SectionHeading description="Each card shows the shadow on the selected surface. Expand to inspect individual layers.">
-        Elevation
-      </SectionHeading>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {profile.shadows.map((shadow) => (
           <TokenCard
@@ -210,9 +205,6 @@ export default function ShadowsPage() {
     );
   }
 
-  const source =
-    profile.meta.cssSource || profile.meta.tailwindConfigPath || "repo";
-
   return (
     <BrandTokenPageLayout
       hero={
@@ -225,10 +217,6 @@ export default function ShadowsPage() {
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
       <div className="space-y-6">
-        <TokenPageProvenanceLine>
-          Auto-extracted from {source} · {profile.shadows.length} tokens
-        </TokenPageProvenanceLine>
-
         <TokenPagePillTabs
           value={surface}
           onValueChange={(v) => setSurface(v as Surface)}

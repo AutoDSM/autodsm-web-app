@@ -12,7 +12,6 @@ import {
   BrandTokenPageHero,
   BrandTokenPageLayout,
   LastUpdatedLabel,
-  TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
 import { CompactColorTokenRow } from "@/components/dashboard/compact-color-token-row";
 import { brandDashboardCardRadius } from "@/components/ui/brand-card-tokens";
@@ -20,8 +19,6 @@ import {
   TokenSearchInput,
   useDeferredQuery,
 } from "@/components/dashboard/token-page-kit";
-import type { ColorGroup } from "@/lib/brand/types";
-
 function filterPalette(
   all: BrandColor[],
   kind: "primary" | "secondary",
@@ -53,22 +50,9 @@ function EmptyTabStrip({ children }: { children: React.ReactNode }) {
 const HERO_DESC =
   "Palette tokens extracted from your repository—hover a swatch for channels and token details.";
 
-const GROUPS: { id: "all" | ColorGroup; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "brand", label: "Brand" },
-  { id: "accent", label: "Accent" },
-  { id: "semantic", label: "Semantic" },
-  { id: "neutral", label: "Neutral" },
-  { id: "surface", label: "Surface" },
-  { id: "interactive", label: "Interactive" },
-  { id: "chart", label: "Chart" },
-  { id: "custom", label: "Custom" },
-];
-
 export default function ColorsPage() {
   const profile = useBrandStore((s) => s.profile);
   const [search, setSearch] = React.useState("");
-  const [groupTab, setGroupTab] = React.useState<string>("all");
   const q = useDeferredQuery(search);
 
   const onCopyHex = React.useCallback(async (displayHex: string) => {
@@ -79,11 +63,6 @@ export default function ColorsPage() {
       toast.error("Copy failed");
     }
   }, []);
-
-  const source =
-    profile?.meta.cssSource ||
-    profile?.meta.tailwindConfigPath ||
-    "repo";
 
   if (!profile || profile.colors.length === 0) {
     return (
@@ -116,8 +95,7 @@ export default function ColorsPage() {
     if (q && !`${c.name} ${c.value} ${c.cssVariable} ${c.hsl} ${c.rgb} ${c.group} ${c.oklch ?? ""}`.toLowerCase().includes(q)) {
       return false;
     }
-    if (groupTab === "all") return true;
-    return c.group === groupTab;
+    return true;
   });
 
   const primary = filterPalette(filtered, "primary");
@@ -138,33 +116,11 @@ export default function ColorsPage() {
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
       <div className="space-y-6">
-        <div className="space-y-4">
-          <TokenPageProvenanceLine>Auto-extracted from {source}</TokenPageProvenanceLine>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div className="flex flex-wrap gap-1.5">
-              {GROUPS.map((g) => (
-                <button
-                  key={g.id}
-                  type="button"
-                  onClick={() => setGroupTab(g.id)}
-                  className={cn(
-                    "rounded-full border px-2.5 py-1 text-[12px] transition-colors",
-                    groupTab === g.id
-                      ? "border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-primary)]"
-                      : "border-transparent text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]",
-                  )}
-                >
-                  {g.label}
-                </button>
-              ))}
-            </div>
-            <TokenSearchInput
-              value={search}
-              onValueChange={setSearch}
-              className="w-full min-w-0 sm:max-w-sm"
-            />
-          </div>
-        </div>
+        <TokenSearchInput
+          value={search}
+          onValueChange={setSearch}
+          className="w-full min-w-0 sm:max-w-sm"
+        />
 
         <Tabs defaultValue="primary" className="w-full max-w-full">
           <TabsList variant="pill" className="h-auto w-full max-w-md">

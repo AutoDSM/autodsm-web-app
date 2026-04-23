@@ -8,9 +8,7 @@ import {
   BrandTokenPageHero,
   BrandTokenPageLayout,
   LastUpdatedLabel,
-  TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
-import { SectionHeading } from "@/components/dashboard/section-heading";
 import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
 import { TokenCard } from "@/components/dashboard/token-card";
 import { cn } from "@/lib/utils";
@@ -157,10 +155,6 @@ export default function AssetsPage() {
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
       <div className="space-y-6">
-        <TokenPageProvenanceLine>
-          {profile.assets.length} assets · scanned from {profile.meta.filesScanned} files
-        </TokenPageProvenanceLine>
-
         <TokenPagePillTabs
           defaultValue={categories[0]}
           tabs={categories.map((cat) => {
@@ -170,12 +164,9 @@ export default function AssetsPage() {
               label: CATEGORY_LABELS[cat],
               content: (
                 <section>
-                  <SectionHeading
-                    description={`${items.length} ${items.length === 1 ? "asset" : "assets"} in this category.`}
-                    action={<SurfaceToggle value={surface} onChange={setSurface} />}
-                  >
-                    {CATEGORY_LABELS[cat]}
-                  </SectionHeading>
+                  <div className="mb-4 flex justify-end">
+                    <SurfaceToggle value={surface} onChange={setSurface} />
+                  </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     {items.map((asset) => {
                       const specs = [

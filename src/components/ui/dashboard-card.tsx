@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { CATEGORY_LABELS, type BrandCategory } from "@/lib/brand/types";
 import { brandDashboardCardRadius } from "@/components/ui/brand-card-tokens";
+import { useDashboardAppBasePath } from "@/components/shell/dashboard-app-context";
 
 const TOKEN_ICONS: Record<BrandCategory, LucideIcon> = {
   colors: Palette,
@@ -52,8 +53,11 @@ export const DASHBOARD_TOKEN_DESCRIPTIONS: Record<BrandCategory, string> = {
   breakpoints: "Min-width steps for responsive layouts and grids.",
 };
 
-export function dashboardHrefForToken(token: BrandCategory): string {
-  return `/dashboard/${token}`;
+export function dashboardHrefForToken(
+  token: BrandCategory,
+  appBasePath: string = "/dashboard",
+): string {
+  return `${appBasePath}/${token}`;
 }
 
 export type DashboardCardProps = {
@@ -66,8 +70,9 @@ export type DashboardCardProps = {
  * Matches the in-app “dashboard card” reference.
  */
 export function DashboardCard({ token, className }: DashboardCardProps) {
+  const appBasePath = useDashboardAppBasePath();
   const Icon = TOKEN_ICONS[token];
-  const href = dashboardHrefForToken(token);
+  const href = dashboardHrefForToken(token, appBasePath);
   const title = CATEGORY_LABELS[token] ?? token;
   const description = DASHBOARD_TOKEN_DESCRIPTIONS[token];
 

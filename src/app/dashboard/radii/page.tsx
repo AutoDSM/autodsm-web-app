@@ -8,7 +8,6 @@ import {
   BrandTokenPageHero,
   BrandTokenPageLayout,
   LastUpdatedLabel,
-  TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
 import { SectionHeading } from "@/components/dashboard/section-heading";
 import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
@@ -50,9 +49,6 @@ export default function RadiiPage() {
     );
   }
 
-  const source =
-    profile.meta.cssSource || profile.meta.tailwindConfigPath || "repo";
-
   const sorted = [...profile.radii].sort((a, b) => a.px - b.px);
   const buttonRadius =
     sorted.find((r) => r.px >= 6 && r.px <= 12) ?? sorted[Math.floor(sorted.length / 2)];
@@ -82,10 +78,6 @@ export default function RadiiPage() {
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
       <div className="space-y-6">
-        <TokenPageProvenanceLine>
-          Auto-extracted from {source} · {sorted.length} tokens
-        </TokenPageProvenanceLine>
-
         <TokenPagePillTabs
           defaultValue="progression"
           tabs={[
@@ -94,9 +86,6 @@ export default function RadiiPage() {
               label: "Progression",
               content: (
                 <section>
-                  <SectionHeading description="Each square shows the radius at a constant size, sorted smallest to largest.">
-                    Progression
-                  </SectionHeading>
                   <div
                     className={cn(
                       brandTokenSurface,

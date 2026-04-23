@@ -8,7 +8,6 @@ import {
   BrandTokenPageHero,
   BrandTokenPageLayout,
   LastUpdatedLabel,
-  TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
 import { SectionHeading } from "@/components/dashboard/section-heading";
 import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
@@ -60,8 +59,6 @@ export default function OpacityPage() {
       .toLowerCase()
       .includes(d);
   });
-  const source = profile.meta.cssSource || profile.meta.tailwindConfigPath || "repo";
-
   return (
     <BrandTokenPageLayout
       hero={
@@ -74,12 +71,11 @@ export default function OpacityPage() {
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
       <div className="space-y-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <TokenPageProvenanceLine>
-            Auto-extracted from {source} · {sorted.length} tokens
-          </TokenPageProvenanceLine>
-          <TokenSearchInput value={q} onValueChange={setQ} className="w-full sm:max-w-xs" />
-        </div>
+        <TokenSearchInput
+          value={q}
+          onValueChange={setQ}
+          className="ml-auto w-full max-w-xs"
+        />
 
         <TokenPagePillTabs
           defaultValue="scale"
@@ -89,9 +85,6 @@ export default function OpacityPage() {
               label: "Scale",
               content: (
                 <section>
-                  <SectionHeading description="Ordered low to high. Tiles use the accent color against a checkerboard so alpha is visible.">
-                    Scale
-                  </SectionHeading>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     {filtered.map((o) => (
                       <TokenCard

@@ -2,6 +2,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { buildDemoBrandProfile } from "./demo-profile";
 import { getDevPreviewRepoSlug, isDevAuthBypassEnabled } from "@/lib/dev/local-preview";
+import { isTestDashboardBypassEnabled } from "@/lib/dev/test-dashboard-bypass";
 import type { BrandProfile } from "./types";
 
 export interface LoadedBrand {
@@ -15,7 +16,7 @@ export interface LoadedBrand {
 
 /** Loads the currently-authenticated user's most recently connected repo. */
 export async function loadMyBrand(): Promise<LoadedBrand | null> {
-  if (isDevAuthBypassEnabled()) {
+  if (isDevAuthBypassEnabled() || isTestDashboardBypassEnabled()) {
     const slug = getDevPreviewRepoSlug();
     const parts = slug.split("/").filter(Boolean);
     const owner = parts[0] ?? "demo";

@@ -10,7 +10,6 @@ import {
   BrandTokenPageHero,
   BrandTokenPageLayout,
   LastUpdatedLabel,
-  TokenPageProvenanceLine,
 } from "@/components/dashboard/brand-token-page-layout";
 import { SectionHeading } from "@/components/dashboard/section-heading";
 import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
@@ -81,9 +80,6 @@ export default function SpacingPage() {
     );
   }
 
-  const source =
-    profile.meta.cssSource || profile.meta.tailwindConfigPath || "repo";
-
   const sorted = [...profile.spacing].sort((a, b) => a.px - b.px);
   const filtered = sorted.filter((s) => matchesQuery(s, q));
   const maxPx = Math.max(...sorted.map((s) => s.px), 1);
@@ -134,11 +130,8 @@ export default function SpacingPage() {
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
       <div className="space-y-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <TokenPageProvenanceLine>
-            Auto-extracted from {source} · {sorted.length} tokens
-          </TokenPageProvenanceLine>
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-end">
+          <div className="flex w-full flex-wrap items-center justify-end gap-2">
             <div className="inline-flex rounded-lg border border-[var(--border-subtle)] p-0.5">
               <Button
                 type="button"
