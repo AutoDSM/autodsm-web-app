@@ -244,7 +244,7 @@ export default function SpacingPage() {
                         </div>
                       }
                       name={`padding: ${sp4?.name ?? "4"}`}
-                      subtitle={sp4?.tailwindClasses[0] ?? "p-4"}
+                      subtitle={sp4?.tailwindClasses?.[0] ?? "p-4"}
                       specs={[
                         { label: sp4?.rem ?? "1rem" },
                         { label: `${sp4?.px ?? 16}px` },
@@ -273,7 +273,7 @@ export default function SpacingPage() {
                         </div>
                       }
                       name={`column gap: ${sp4?.name ?? "4"}`}
-                      subtitle={sp4?.tailwindClasses[2] ?? "gap-4"}
+                      subtitle={sp4?.tailwindClasses?.[2] ?? "gap-4"}
                       specs={[
                         { label: sp4?.rem ?? "1rem" },
                         { label: `${sp4?.px ?? 16}px` },
