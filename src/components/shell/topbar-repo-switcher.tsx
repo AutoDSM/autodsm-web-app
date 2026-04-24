@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronsUpDown } from "lucide-react";
+import Image from "next/image";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,14 +24,35 @@ import { useBrandRepos } from "@/hooks/use-brand-repos";
 export function TopbarRepoSwitcher() {
   const router = useRouter();
   const repoSlug = useBrandStore((s) => s.repoSlug);
+  const profile = useBrandStore((s) => s.profile);
   const { repos, loading } = useBrandRepos(repoSlug);
   const [pending, startTransition] = React.useTransition();
+
+  const primaryLogoAsset = React.useMemo(() => {
+    const path = profile?.meta?.primaryLogoPath;
+    if (!path) return null;
+    return profile?.assets?.find((a) => a.path === path) ?? null;
+  }, [profile]);
 
   if (loading || repos.length <= 1) {
     // No need for a switcher when there's only one repo (or none yet).
     return repoSlug ? (
-      <span className="truncate text-[12px] text-[var(--text-tertiary)]">
-        {repoSlug}
+      <span className="flex min-w-0 items-center gap-2">
+        {primaryLogoAsset?.storageUrl ? (
+          <span className="relative size-4 shrink-0 overflow-hidden rounded bg-[var(--bg-elevated)] ring-1 ring-[var(--border-subtle)]">
+            <Image
+              src={primaryLogoAsset.storageUrl}
+              alt=""
+              width={16}
+              height={16}
+              unoptimized={primaryLogoAsset.type === "svg"}
+              className="h-full w-full object-contain"
+            />
+          </span>
+        ) : null}
+        <span className="truncate text-[12px] text-[var(--text-tertiary)]">
+          {repoSlug}
+        </span>
       </span>
     ) : null;
   }
@@ -59,6 +81,18 @@ export function TopbarRepoSwitcher() {
           className="h-7 gap-2 px-2 text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           disabled={pending}
         >
+          {primaryLogoAsset?.storageUrl ? (
+            <span className="relative size-4 shrink-0 overflow-hidden rounded bg-[var(--bg-elevated)] ring-1 ring-[var(--border-subtle)]">
+              <Image
+                src={primaryLogoAsset.storageUrl}
+                alt=""
+                width={16}
+                height={16}
+                unoptimized={primaryLogoAsset.type === "svg"}
+                className="h-full w-full object-contain"
+              />
+            </span>
+          ) : null}
           <span className="truncate max-w-[180px]">{repoSlug ?? "Pick repo"}</span>
           <ChevronsUpDown size={12} aria-hidden />
         </Button>
