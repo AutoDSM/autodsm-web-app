@@ -11,6 +11,8 @@ export interface LoadedBrand {
   profile: BrandProfile | null;
   status: "pending" | "scanning" | "completed" | "failed" | "unsupported";
   unsupportedReason: string | null;
+  /** Last scan error message (user_onboarding), useful when status is `failed`. */
+  lastScanError: string | null;
   isPublic: boolean;
 }
 
@@ -27,6 +29,7 @@ export async function loadMyBrand(): Promise<LoadedBrand | null> {
       profile: buildDemoBrandProfile(owner, repoName),
       status: "completed",
       unsupportedReason: null,
+      lastScanError: null,
       isPublic: true,
     };
   }
@@ -47,12 +50,25 @@ export async function loadMyBrand(): Promise<LoadedBrand | null> {
 
   if (!data) return null;
 
+  const status = (data.scan_status as LoadedBrand["status"]) ?? "pending";
+
+  let lastScanError: string | null = null;
+  if (status === "failed") {
+    const { data: uo } = await supabase
+      .from("user_onboarding")
+      .select("last_scan_error")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    lastScanError = (uo?.last_scan_error as string | null) ?? null;
+  }
+
   return {
     repoSlug: `${data.owner}/${data.name}`,
     userId: data.user_id,
     profile: (data.brand_profile as BrandProfile | null) ?? null,
-    status: (data.scan_status as LoadedBrand["status"]) ?? "pending",
+    status,
     unsupportedReason: (data.unsupported_reason as string | null) ?? null,
+    lastScanError,
     isPublic: data.is_public,
   };
 }
@@ -80,6 +96,7 @@ export async function loadPublicBrand(
     profile: (data.brand_profile as BrandProfile | null) ?? null,
     status: (data.scan_status as LoadedBrand["status"]) ?? "pending",
     unsupportedReason: (data.unsupported_reason as string | null) ?? null,
+    lastScanError: null,
     isPublic: data.is_public,
   };
 }

@@ -154,6 +154,7 @@ export function DashboardShell({
   children,
   userLabel,
   showPreviewOnboardingLink,
+  repoIssueBanner,
   appBasePath = DEFAULT_DASHBOARD_APP_BASE_PATH,
   markVariant = "perplexity",
 }: {
@@ -161,6 +162,8 @@ export function DashboardShell({
   userLabel?: string;
   /** Vercel Preview + test-bypass: link to real onboarding (QA). */
   showPreviewOnboardingLink?: boolean;
+  /** Full-width alert when the connected repo can’t be scanned (stay in dashboard). */
+  repoIssueBanner?: React.ReactNode;
   /** e.g. `/demo` for the public product demo; default `/dashboard`. */
   appBasePath?: string;
   markVariant?: AppMarkVariant;
@@ -200,6 +203,7 @@ export function DashboardShell({
                     </p>
                   </div>
                 ) : null}
+                {repoIssueBanner}
                 <RescanBanner />
                 {children}
               </div>

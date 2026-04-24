@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ProductIcon } from "@/components/brand/product-mark";
@@ -53,23 +54,52 @@ function UnsupportedPageInner() {
           )}
         </p>
 
+        <div className="mt-6 flex flex-col gap-3">
+          <Button variant="default" size="lg" className="w-full" asChild>
+            <Link href="/onboarding/connect">Choose a different repository</Link>
+          </Button>
+          <div className="flex flex-col gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-3 text-[13px] leading-snug text-[var(--text-secondary)]">
+            <span className="font-medium text-[var(--text-primary)]">Already connected?</span>
+            <p>
+              <Link
+                href="/dashboard/settings"
+                className="font-medium text-[var(--accent)] underline decoration-[var(--accent)]/35 underline-offset-2 hover:decoration-[var(--accent)]"
+              >
+                Settings
+              </Link>
+              {" · "}
+              <Link
+                href="/dashboard"
+                className="font-medium text-[var(--accent)] underline decoration-[var(--accent)]/35 underline-offset-2 hover:decoration-[var(--accent)]"
+              >
+                Dashboard
+              </Link>
+            </p>
+          </div>
+        </div>
+
         {submitted ? (
           <div className="mt-6 rounded-[8px] border border-[color-mix(in_srgb,var(--success)_40%,transparent)] bg-[color-mix(in_srgb,var(--success)_8%,transparent)] p-4 text-[13px] text-[var(--success)]">
             Thanks — we&apos;ll email you when {reason ? reason : "your framework"} is supported.
           </div>
         ) : (
-          <form className="mt-6 flex flex-col gap-3" onSubmit={submit}>
-            <Input
-              type="email"
-              placeholder="you@company.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="h-11 bg-[var(--bg-secondary)]"
-            />
-            <Button type="submit" size="lg" disabled={loading}>
-              {loading ? "Submitting…" : "Notify me"}
-            </Button>
-          </form>
+          <>
+            <p className="mt-8 text-[12px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">
+              Get notified
+            </p>
+            <form className="mt-2 flex flex-col gap-3" onSubmit={submit}>
+              <Input
+                type="email"
+                placeholder="you@company.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="h-11 bg-[var(--bg-secondary)]"
+              />
+              <Button type="submit" size="lg" variant="outline" disabled={loading}>
+                {loading ? "Submitting…" : "Notify me"}
+              </Button>
+            </form>
+          </>
         )}
       </div>
     </div>

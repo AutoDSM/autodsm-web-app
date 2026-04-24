@@ -36,6 +36,12 @@ export function TopBar() {
     return null;
   }
 
+  /** Overview already has a page hero; hide the redundant “Dashboard” section title row. */
+  const normalizedBase = appBasePath.replace(/\/$/, "") || "/dashboard";
+  if (pathname === normalizedBase || pathname === `${normalizedBase}/`) {
+    return null;
+  }
+
   return (
     <div
       className={[

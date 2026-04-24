@@ -4,7 +4,9 @@ import { loadMyBrand } from "@/lib/brand/load";
 import { getDevPreviewRepoSlug, isDevAuthBypassEnabled } from "@/lib/dev/local-preview";
 import { isTestDashboardBypassEnabled } from "@/lib/dev/test-dashboard-bypass";
 import { BrandProvider } from "@/components/brand/brand-provider";
+import { DashboardRepoIssueBanner } from "@/components/dashboard/dashboard-repo-issue-banner";
 import { DashboardShell } from "@/components/shell/dashboard-shell";
+import { shouldShowRepoLoadBanner } from "@/lib/brand/repo-load-issue";
 
 export default async function DashboardLayout({
   children,
@@ -23,12 +25,6 @@ export default async function DashboardLayout({
   const brand = await loadMyBrand();
   if (!brand) redirect("/onboarding");
 
-  if (brand.status === "unsupported") {
-    redirect(
-      `/onboarding/unsupported?repo=${encodeURIComponent(brand.repoSlug)}&reason=${encodeURIComponent(brand.unsupportedReason ?? "")}`,
-    );
-  }
-
   let userLabel: string;
   if (isTestDashboardBypassEnabled() && !isDevAuthBypassEnabled()) {
     userLabel = `Test preview · ${getDevPreviewRepoSlug()}`;
@@ -44,11 +40,22 @@ export default async function DashboardLayout({
     !isDevAuthBypassEnabled() &&
     process.env.VERCEL_ENV === "preview";
 
+  const repoIssueBanner =
+    shouldShowRepoLoadBanner(brand.status) ? (
+      <DashboardRepoIssueBanner
+        repoSlug={brand.repoSlug}
+        status={brand.status}
+        reasonCode={brand.unsupportedReason}
+        lastScanError={brand.lastScanError}
+      />
+    ) : null;
+
   return (
     <BrandProvider profile={brand.profile} repoSlug={brand.repoSlug}>
       <DashboardShell
         userLabel={userLabel}
         showPreviewOnboardingLink={showPreviewOnboardingLink}
+        repoIssueBanner={repoIssueBanner}
       >
         {children}
       </DashboardShell>
