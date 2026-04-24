@@ -1,43 +1,29 @@
 import { createRouteHandlerClient } from "@/lib/supabase/route-handler-client";
 import { NextResponse, type NextRequest } from "next/server";
+import type { EmailOtpType } from "@supabase/supabase-js";
 
-/**
- * Supabase OAuth callback — PDF §6.
- * Exchanges the code, creates/ensures the app_users row, then routes based on:
- *   1. Pending repo in session (client-side sessionStorage) — handled by /auth/bridge page
- *   2. Existing connected repo → /dashboard
- *   3. GitHub OAuth → /onboarding (repo picker)
- *   4. Google OAuth → /onboarding (paste-URL mode)
- */
-export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
-  const errorDescription = searchParams.get("error_description");
+const EMAIL_OTP_TYPES: ReadonlySet<string> = new Set([
+  "email",
+  "signup",
+  "magiclink",
+  "recovery",
+  "email_change",
+]);
 
-  if (errorDescription) {
-    return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent(errorDescription)}`,
-    );
-  }
+function isEmailOtpType(t: string): t is EmailOtpType {
+  return EMAIL_OTP_TYPES.has(t);
+}
 
-  if (!code) return NextResponse.redirect(`${origin}/login`);
-
-  const supabase = await createRouteHandlerClient();
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error) {
-    return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent(error.message)}`,
-    );
-  }
-
-  // Check if user already has a connected repo
+async function finishAuthSession(
+  supabase: Awaited<ReturnType<typeof createRouteHandlerClient>>,
+  origin: string,
+) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) return NextResponse.redirect(`${origin}/login`);
 
-  // Ensure app_users row exists (trigger should handle this but be safe)
   await supabase
     .from("app_users")
     .upsert(
@@ -54,6 +40,51 @@ export async function GET(request: NextRequest) {
       { onConflict: "id" },
     );
 
-  // Hand off to a client-side bridge so we can read sessionStorage for pending repo
   return NextResponse.redirect(`${origin}/auth/bridge`);
+}
+
+/**
+ * Supabase auth callback: OAuth PKCE (`code`) or email magic link (`token_hash` + `type`).
+ * Ensures app_users row, then /auth/bridge for pending-repo sessionStorage handling.
+ */
+export async function GET(request: NextRequest) {
+  const { searchParams, origin } = new URL(request.url);
+  const code = searchParams.get("code");
+  const tokenHash = searchParams.get("token_hash");
+  const otpTypeRaw = searchParams.get("type");
+  const otpType = otpTypeRaw?.toLowerCase() ?? "";
+  const errorDescription = searchParams.get("error_description");
+
+  if (errorDescription) {
+    return NextResponse.redirect(
+      `${origin}/login?error=${encodeURIComponent(errorDescription)}`,
+    );
+  }
+
+  const supabase = await createRouteHandlerClient();
+
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      return NextResponse.redirect(
+        `${origin}/login?error=${encodeURIComponent(error.message)}`,
+      );
+    }
+    return finishAuthSession(supabase, origin);
+  }
+
+  if (tokenHash && otpType && isEmailOtpType(otpType)) {
+    const { error } = await supabase.auth.verifyOtp({
+      type: otpType as EmailOtpType,
+      token_hash: tokenHash,
+    });
+    if (error) {
+      return NextResponse.redirect(
+        `${origin}/login?error=${encodeURIComponent(error.message)}`,
+      );
+    }
+    return finishAuthSession(supabase, origin);
+  }
+
+  return NextResponse.redirect(`${origin}/login`);
 }

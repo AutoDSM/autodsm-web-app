@@ -5,8 +5,11 @@ import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { isSupabasePublicConfigured } from "@/lib/supabase/env";
+import { createClient } from "@/lib/supabase/client";
+import { getAuthRedirectOrigin } from "@/lib/supabase/oauth-redirect";
 import { ProductWordmark } from "@/components/brand/product-mark";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { GithubGlyph, GoogleGlyph } from "@/components/auth/oauth-glyphs";
 import { setPreviewOnboarding } from "@/lib/onboarding/storage";
 import { toast } from "sonner";
@@ -56,11 +59,27 @@ function parseOAuthReturnErrorFromHash(hash: string): string | null {
 
 const DEV_PREVIEW = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_ONBOARDING_DEV_PREVIEW === "1";
 
+function formatMagicLinkError(message: string): string {
+  const lower = message.toLowerCase();
+  if (
+    lower.includes("rate limit") ||
+    lower.includes("over_email_send") ||
+    lower.includes("email rate limit") ||
+    lower.includes("too many requests")
+  ) {
+    return "Too many sign-in emails were sent from this network. Wait a few minutes and try again. If you use local Supabase, restart after changing limits: supabase stop && supabase start. If you use hosted Supabase, raise OTP/email limits under Dashboard → Authentication → Rate limits.";
+  }
+  return message;
+}
+
 function LoginForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const isSignup = searchParams.get("mode") === "signup";
-  const [loading, setLoading] = React.useState<"github" | "google" | null>(null);
+  const [email, setEmail] = React.useState("");
+  const [loading, setLoading] = React.useState<"email" | "github" | "google" | null>(null);
+  const [emailSent, setEmailSent] = React.useState(false);
+  const [emailFieldError, setEmailFieldError] = React.useState<string | null>(null);
   const [errorFromQuery, setErrorFromQuery] = React.useState<string | null>(null);
   const supabaseReady = React.useMemo(() => isSupabasePublicConfigured(), []);
 
@@ -70,6 +89,48 @@ function LoginForm() {
       parseOAuthReturnError(url) || parseOAuthReturnErrorFromHash(window.location.hash);
     if (err) setErrorFromQuery(err);
   }, []);
+
+  React.useEffect(() => {
+    setEmailSent(false);
+    setEmailFieldError(null);
+  }, [isSignup]);
+
+  async function submitEmail(e: React.FormEvent) {
+    e.preventDefault();
+    if (!supabaseReady) {
+      toast.error(SUPABASE_SETUP_MESSAGE);
+      return;
+    }
+    const trimmed = email.trim();
+    if (!trimmed) {
+      setEmailFieldError("Enter your email address.");
+      return;
+    }
+    setEmailFieldError(null);
+    setLoading("email");
+    try {
+      // Must run in the browser so PKCE verifier lives in the same cookie jar as /auth/callback
+      // (Route Handler POST + fetch() often drops verifier → "PKCE code verifier not found").
+      const supabase = createClient();
+      const origin = getAuthRedirectOrigin() || window.location.origin;
+      const { error } = await supabase.auth.signInWithOtp({
+        email: trimmed,
+        options: {
+          emailRedirectTo: `${origin}/auth/callback`,
+          shouldCreateUser: true,
+        },
+      });
+      if (error) {
+        setEmailFieldError(formatMagicLinkError(error.message));
+        return;
+      }
+      setEmailSent(true);
+    } catch {
+      setEmailFieldError("Network error. Try again.");
+    } finally {
+      setLoading(null);
+    }
+  }
 
   function signIn(provider: "github" | "google") {
     if (!supabaseReady) {
@@ -124,30 +185,95 @@ function LoginForm() {
           </div>
         ) : null}
 
-        <div className="mt-8 flex flex-col gap-3">
-          <Button
-            type="button"
-            size="lg"
-            className="w-full bg-[var(--text-primary)] text-[var(--bg-primary)] hover:opacity-90"
-            onClick={() => signIn("github")}
-            disabled={loading !== null || !supabaseReady}
-          >
-            <GithubGlyph />
-            {loading === "github" ? "Redirecting…" : "Continue with GitHub"}
-          </Button>
+        {supabaseReady ? (
+          <div className="mt-8 flex flex-col gap-3">
+            {emailSent ? (
+              <div className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-secondary)] p-4 text-left">
+                <p className="text-[13px] leading-[18px] text-[var(--text-primary)] font-medium">
+                  Check your email
+                </p>
+                <p className="mt-1 text-[13px] leading-[18px] text-[var(--text-secondary)]">
+                  We sent a link to <span className="text-[var(--text-primary)]">{email.trim()}</span>. Open it to
+                  sign in; if you are new here, the same link creates your account. You can close this tab after you
+                  use the link.
+                </p>
+                <button
+                  type="button"
+                  className="mt-3 text-[13px] font-medium text-[var(--text-primary)] hover:underline underline-offset-2 [font-family:var(--font-geist-sans)]"
+                  onClick={() => {
+                    setEmailSent(false);
+                    setEmailFieldError(null);
+                  }}
+                >
+                  Use a different email
+                </button>
+              </div>
+            ) : (
+              <form className="flex flex-col gap-3" onSubmit={submitEmail}>
+                <label htmlFor="login-email" className="sr-only">
+                  Email
+                </label>
+                <Input
+                  id="login-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@company.com"
+                  value={email}
+                  onChange={(ev) => {
+                    setEmail(ev.target.value);
+                    if (emailFieldError) setEmailFieldError(null);
+                  }}
+                  disabled={loading !== null}
+                  className="bg-[var(--bg-secondary)]"
+                />
+                {emailFieldError ? (
+                  <p className="text-[13px] leading-[18px] text-[var(--text-secondary)]" role="alert">
+                    {emailFieldError}
+                  </p>
+                ) : null}
+                <Button type="submit" size="lg" className="w-full" disabled={loading !== null}>
+                  {loading === "email" ? "Sending link…" : "Continue with Email"}
+                </Button>
+              </form>
+            )}
 
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            className="w-full border border-[var(--border-default)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-canvas)] dark:bg-[var(--bg-secondary)] dark:hover:bg-[var(--bg-tertiary)]"
-            onClick={() => signIn("google")}
-            disabled={loading !== null || !supabaseReady}
-          >
-            <GoogleGlyph />
-            {loading === "google" ? "Redirecting…" : "Continue with Google"}
-          </Button>
-        </div>
+            <div className="relative my-1" aria-hidden="true">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-[var(--border-default)]" />
+              </div>
+              <div className="relative flex justify-center text-[12px]">
+                <span className="bg-[var(--bg-elevated)] px-3 text-[var(--text-secondary)] [font-family:var(--font-geist-sans)]">
+                  or
+                </span>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="w-full border border-[var(--border-default)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-canvas)] dark:bg-[var(--bg-secondary)] dark:hover:bg-[var(--bg-tertiary)]"
+              onClick={() => signIn("github")}
+              disabled={loading !== null}
+            >
+              <GithubGlyph />
+              {loading === "github" ? "Redirecting…" : "Continue with GitHub"}
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="w-full border border-[var(--border-default)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-canvas)] dark:bg-[var(--bg-secondary)] dark:hover:bg-[var(--bg-tertiary)]"
+              onClick={() => signIn("google")}
+              disabled={loading !== null}
+            >
+              <GoogleGlyph />
+              {loading === "google" ? "Redirecting…" : "Continue with Google"}
+            </Button>
+          </div>
+        ) : null}
 
         {isSignup ? (
           <p className="mt-8 text-center text-[14px] text-[var(--text-secondary)] [font-family:var(--font-geist-sans)]">

@@ -43,6 +43,17 @@ export async function POST(req: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession();
 
+  const errorToFields = (e: unknown): Record<string, string | undefined> => {
+    if (e instanceof Error) {
+      return {
+        message: e.message?.slice(0, 500),
+        name: e.name?.slice(0, 120),
+        stack: e.stack?.slice(0, 4000),
+      };
+    }
+    return { message: String(e).slice(0, 500) };
+  };
+
   const scanLog = (event: string, fields?: Record<string, string | undefined>) => {
     if (process.env.NODE_ENV === "development") {
       console.info("[scan]", event, fields ?? "");
@@ -75,13 +86,26 @@ export async function POST(req: NextRequest) {
     { onConflict: "user_id" }
   );
 
-  const result = await runRepoScan(supabase, user, session, {
-    owner,
-    name,
-    projectName,
-    scanLog,
-    markScanError,
-  });
+  let result: Awaited<ReturnType<typeof runRepoScan>>;
+  try {
+    result = await runRepoScan(supabase, user, session, {
+      owner,
+      name,
+      projectName,
+      scanLog,
+      markScanError,
+    });
+  } catch (e) {
+    const fields = errorToFields(e);
+    scanLog("fatal", { owner, name, ...fields });
+    await markScanError(
+      "Scan failed unexpectedly. Open the technical details for more info, then try again."
+    );
+    return NextResponse.json(
+      { error: "Scan failed unexpectedly. Please try again.", errorCode: "internal_error" },
+      { status: 500 }
+    );
+  }
 
   if (result.kind === "error") {
     return NextResponse.json(result.body, { status: result.status });

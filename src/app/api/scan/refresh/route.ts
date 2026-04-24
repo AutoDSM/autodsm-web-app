@@ -47,6 +47,17 @@ export async function POST() {
     data: { session },
   } = await supabase.auth.getSession();
 
+  const errorToFields = (e: unknown): Record<string, string | undefined> => {
+    if (e instanceof Error) {
+      return {
+        message: e.message?.slice(0, 500),
+        name: e.name?.slice(0, 120),
+        stack: e.stack?.slice(0, 4000),
+      };
+    }
+    return { message: String(e).slice(0, 500) };
+  };
+
   const profile = (repoRow.brand_profile as BrandProfile | null) ?? null;
   const projectName =
     profile?.meta?.projectName?.trim() || repoRow.name;
@@ -83,13 +94,26 @@ export async function POST() {
     { onConflict: "user_id" }
   );
 
-  const result = await runRepoScan(supabase, user, session, {
-    owner: repoRow.owner,
-    name: repoRow.name,
-    projectName,
-    scanLog,
-    markScanError,
-  });
+  let result: Awaited<ReturnType<typeof runRepoScan>>;
+  try {
+    result = await runRepoScan(supabase, user, session, {
+      owner: repoRow.owner,
+      name: repoRow.name,
+      projectName,
+      scanLog,
+      markScanError,
+    });
+  } catch (e) {
+    const fields = errorToFields(e);
+    scanLog("fatal", { owner: repoRow.owner, name: repoRow.name, ...fields });
+    await markScanError(
+      "Scan failed unexpectedly. Open the technical details for more info, then try again."
+    );
+    return NextResponse.json(
+      { error: "Scan failed unexpectedly. Please try again.", errorCode: "internal_error" },
+      { status: 500 }
+    );
+  }
 
   if (result.kind === "error") {
     return NextResponse.json(result.body, { status: result.status });

@@ -14,3 +14,14 @@ export function getOAuthRedirectOrigin(request: NextRequest): string {
   if (host) return `${proto}://${host}`;
   return request.nextUrl.origin;
 }
+
+/**
+ * Origin for `emailRedirectTo` when magic link is started from the browser.
+ * Prefer NEXT_PUBLIC_APP_URL so prod matches Supabase redirect allow-list; otherwise `window.location.origin`.
+ */
+export function getAuthRedirectOrigin(): string {
+  const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "").trim();
+  if (fromEnv) return fromEnv;
+  if (typeof window !== "undefined") return window.location.origin;
+  return "";
+}
