@@ -5,7 +5,8 @@ import { runRepoScan } from "@/lib/scan/run-repo-scan";
 import type { BrandProfile } from "@/lib/brand/types";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+// Refresh re-runs the inline scan; same 300s budget as POST /api/scan.
+export const maxDuration = 300;
 
 /**
  * POST /api/scan/refresh
@@ -56,6 +57,13 @@ export async function POST() {
     } else {
       console.info(`[scan/refresh] ${JSON.stringify({ event, ...fields })}`);
     }
+    void supabase
+      .from("brand_scan_logs")
+      .insert({
+        event,
+        payload: { ...fields, scope: "refresh", userId: user.id },
+      })
+      .then(() => undefined, () => undefined);
   };
 
   const markScanError = async (message: string) => {

@@ -4,6 +4,7 @@ import { buildDemoBrandProfile } from "./demo-profile";
 import { getDevPreviewRepoSlug, isDevAuthBypassEnabled } from "@/lib/dev/local-preview";
 import { isTestDashboardBypassEnabled } from "@/lib/dev/test-dashboard-bypass";
 import type { BrandProfile } from "./types";
+import { parseStoredProfile } from "./parse-stored-profile";
 
 export interface LoadedBrand {
   repoSlug: string;
@@ -40,13 +41,48 @@ export async function loadMyBrand(): Promise<LoadedBrand | null> {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data } = await supabase
-    .from("brand_repos")
-    .select("owner,name,brand_profile,scan_status,unsupported_reason,is_public,user_id")
+  // Honour the user's selected repo (set via the topbar switcher) when set;
+  // fall back to the most recently connected repo otherwise.
+  const { data: prefs } = await supabase
+    .from("user_preferences")
+    .select("last_repo")
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
     .maybeSingle();
+  const lastRepo = ((prefs?.last_repo as string | null) ?? "").trim();
+  const lastParts = lastRepo.split("/").filter(Boolean);
+
+  type BrandRepoRow = {
+    owner: string;
+    name: string;
+    brand_profile: unknown;
+    scan_status: string | null;
+    unsupported_reason: string | null;
+    is_public: boolean;
+    user_id: string;
+  };
+  let data: BrandRepoRow | null = null;
+
+  if (lastParts.length === 2) {
+    const { data: row } = await supabase
+      .from("brand_repos")
+      .select("owner,name,brand_profile,scan_status,unsupported_reason,is_public,user_id")
+      .eq("user_id", user.id)
+      .eq("owner", lastParts[0])
+      .eq("name", lastParts[1])
+      .maybeSingle();
+    if (row) data = row as unknown as BrandRepoRow;
+  }
+
+  if (!data) {
+    const { data: row } = await supabase
+      .from("brand_repos")
+      .select("owner,name,brand_profile,scan_status,unsupported_reason,is_public,user_id")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (row) data = row as unknown as BrandRepoRow;
+  }
 
   if (!data) return null;
 
@@ -65,7 +101,7 @@ export async function loadMyBrand(): Promise<LoadedBrand | null> {
   return {
     repoSlug: `${data.owner}/${data.name}`,
     userId: data.user_id,
-    profile: (data.brand_profile as BrandProfile | null) ?? null,
+    profile: parseStoredProfile(data.brand_profile),
     status,
     unsupportedReason: (data.unsupported_reason as string | null) ?? null,
     lastScanError,
@@ -93,7 +129,7 @@ export async function loadPublicBrand(
   return {
     repoSlug: `${data.owner}/${data.name}`,
     userId: data.user_id,
-    profile: (data.brand_profile as BrandProfile | null) ?? null,
+    profile: parseStoredProfile(data.brand_profile),
     status: (data.scan_status as LoadedBrand["status"]) ?? "pending",
     unsupportedReason: (data.unsupported_reason as string | null) ?? null,
     lastScanError: null,

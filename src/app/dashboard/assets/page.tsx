@@ -34,23 +34,19 @@ const HERO_DESC =
   "Logos, icons, illustrations, and raster assets discovered across your repository.";
 
 function AssetPreview({ asset }: { asset: BrandAsset }) {
-  if (asset.type === "svg" && asset.content) {
-    return (
-      <div
-        className="flex h-full w-full items-center justify-center p-4 [&_svg]:max-h-full [&_svg]:max-w-full"
-        dangerouslySetInnerHTML={{ __html: asset.content }}
-      />
-    );
-  }
   if (asset.storageUrl) {
     const w = asset.dimensions?.width ?? 200;
     const h = asset.dimensions?.height ?? 200;
+    // SVGs are sanitized server-side and uploaded to the brand-assets bucket
+    // along with rasters. Rendering as <Image>/<img> avoids any
+    // dangerouslySetInnerHTML XSS surface from untrusted repos.
     return (
       <Image
         src={asset.storageUrl}
         alt={asset.name}
         width={w}
         height={h}
+        unoptimized={asset.type === "svg"}
         className="max-h-full max-w-full object-contain p-4"
       />
     );
@@ -88,6 +84,20 @@ export default function AssetsPage() {
     const arr = byCategory.get(a.category) ?? [];
     arr.push(a);
     byCategory.set(a.category, arr);
+  }
+
+  // Pin the picked primary logo to the top of the Logos tab.
+  const primaryLogoPath = profile.meta.primaryLogoPath;
+  if (primaryLogoPath) {
+    const logos = byCategory.get("logo") ?? [];
+    const primary = profile.assets.find((a) => a.path === primaryLogoPath);
+    if (primary && !logos.some((a) => a.path === primary.path)) {
+      logos.unshift(primary);
+      byCategory.set("logo", logos);
+    } else if (primary) {
+      const without = logos.filter((a) => a.path !== primary.path);
+      byCategory.set("logo", [primary, ...without]);
+    }
   }
 
   const categories = CATEGORY_ORDER.filter((c) => byCategory.has(c));

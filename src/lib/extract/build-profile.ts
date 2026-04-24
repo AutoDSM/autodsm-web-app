@@ -31,6 +31,7 @@ import { parseShadcnConfig } from "./shadcn-config";
 import { detectFonts, type FontFileInput } from "./fonts";
 import { scanAssets, type AssetFile } from "./assets";
 import { EXTRACTOR_VERSION } from "./extractor-version";
+import { pickProjectTintColor } from "@/lib/brand/product-tint";
 
 export interface BuildProfileInput {
   repo: { owner: string; name: string; url?: string };
@@ -301,6 +302,23 @@ export async function buildBrandProfile(
     tailwindVersion = "3";
   }
 
+  // Cached server-side tint so SSR matches CSR (no first-paint flash).
+  const tintHex =
+    pickProjectTintColor({ colors: dedupeColors } as unknown as BrandProfile) ?? undefined;
+
+  // Pick a primary logo asset path. Prefer a logo / wordmark / brand asset by
+  // name, then a Next.js icon / favicon convention, then any logo-categorized
+  // asset.
+  const LOGO_RE = /(?:^|\/)(public|assets|src\/assets|app)\/.*?(logo|wordmark|brand)[^/]*\.(svg|png|webp)$/i;
+  const ICON_RE = /(?:^|\/)app\/(icon|apple-icon|favicon|opengraph-image|twitter-image)[^/]*\.(svg|png|ico)$/i;
+  const FAVICON_RE = /(?:^|\/)favicon\.(ico|png|svg)$/i;
+  const primaryLogoPath: string | undefined =
+    assets.find((a) => LOGO_RE.test(a.path))?.path ??
+    assets.find((a) => ICON_RE.test(a.path))?.path ??
+    assets.find((a) => FAVICON_RE.test(a.path))?.path ??
+    assets.find((a) => a.category === "logo")?.path ??
+    undefined;
+
   return {
     repo: {
       owner: repo.owner,
@@ -330,6 +348,8 @@ export async function buildBrandProfile(
       shadcnConfigPath: resolvedShadcnPath,
       tailwindVersion,
       extractorVersion: EXTRACTOR_VERSION,
+      tintHex,
+      primaryLogoPath,
     },
   };
 }

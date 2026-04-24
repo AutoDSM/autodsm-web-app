@@ -51,7 +51,11 @@ export default async function DashboardLayout({
     ) : null;
 
   return (
-    <BrandProvider profile={brand.profile} repoSlug={brand.repoSlug}>
+    <BrandProvider
+      profile={brand.profile}
+      repoSlug={brand.repoSlug}
+      userId={brand.userId}
+    >
       <DashboardShell
         userLabel={userLabel}
         showPreviewOnboardingLink={showPreviewOnboardingLink}

@@ -5,7 +5,9 @@ import { normalizeRepoInput } from "@/lib/utils";
 import { runRepoScan } from "@/lib/scan/run-repo-scan";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+// Inline scan can take a while for large monorepos; Fluid Compute supports
+// up to 300s. Matched in vercel.json so Vercel honours this in production.
+export const maxDuration = 300;
 
 /**
  * POST /api/scan
@@ -45,9 +47,15 @@ export async function POST(req: NextRequest) {
     if (process.env.NODE_ENV === "development") {
       console.info("[scan]", event, fields ?? "");
     } else {
-      const safe = { event, ...fields };
-      console.info(`[scan] ${JSON.stringify(safe)}`);
+      console.info(`[scan] ${JSON.stringify({ event, ...fields })}`);
     }
+    void supabase
+      .from("brand_scan_logs")
+      .insert({
+        event,
+        payload: { ...fields, scope: "scan", userId: user.id },
+      })
+      .then(() => undefined, () => undefined);
   };
 
   const markScanError = async (message: string) => {

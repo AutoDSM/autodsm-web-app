@@ -27,17 +27,52 @@ describe("resolveAccentOnAccent", () => {
 });
 
 describe("buildProjectTintStyle", () => {
-  it("sets 8% mixed elevated and accent tokens", () => {
+  it("emits the project tint plus accent tokens", () => {
     const s = buildProjectTintStyle("#0ea5e9", "light") as Record<string, string | number>;
     expect(s["--project-tint"]).toBe("#0ea5e9");
-    expect(String(s["--bg-elevated"])).toContain("8%");
-    expect(String(s["--bg-elevated"])).toContain("var(--bg-primary)");
     expect(s["--accent"]).toBeDefined();
+    expect(s["--accent-fg"]).toBeDefined();
+    expect(s["--accent-subtle"]).toBeDefined();
   });
 });
 
 describe("meetsAaLargeTextOnAccent", () => {
   it("returns true for strong pair", () => {
     expect(meetsAaLargeTextOnAccent("#0a0a0b", "#ffffff")).toBe(true);
+  });
+});
+
+describe("pickProjectTintColor foreground filter", () => {
+  it("ignores -foreground variants when picking a tint", () => {
+    const profile = {
+      colors: [
+        {
+          name: "primary-foreground",
+          value: "#ffffff",
+          group: "brand" as const,
+        },
+        {
+          name: "primary",
+          value: "#0ea5e9",
+          group: "brand" as const,
+        },
+      ],
+    } as unknown as Parameters<typeof pickProjectTintColor>[0];
+    expect(pickProjectTintColor(profile)).toBe("#0ea5e9");
+  });
+
+  it("prefers darkModeHex in dark mode", () => {
+    const profile = {
+      colors: [
+        {
+          name: "primary",
+          value: "#0ea5e9",
+          darkModeHex: "#1e3a8a",
+          group: "brand" as const,
+        },
+      ],
+    } as unknown as Parameters<typeof pickProjectTintColor>[0];
+    expect(pickProjectTintColor(profile, "dark")).toBe("#1e3a8a");
+    expect(pickProjectTintColor(profile, "light")).toBe("#0ea5e9");
   });
 });

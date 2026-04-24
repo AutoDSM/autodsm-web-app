@@ -4,6 +4,7 @@ import * as React from "react";
 import { usePathname } from "next/navigation";
 import { CATEGORY_LABELS } from "@/lib/brand/types";
 import { useDashboardAppBasePath } from "@/components/shell/dashboard-app-context";
+import { TopbarRepoSwitcher } from "@/components/shell/topbar-repo-switcher";
 
 /** Current dashboard tab title only (no repo slug in the chrome). */
 function sectionTitleFromPath(pathname: string, appBasePath: string): string {
@@ -51,6 +52,9 @@ export function TopBar() {
     >
       <div className="flex min-w-0 items-center">
         <span className="truncate text-body-s font-medium text-[var(--text-primary)]">{title}</span>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <TopbarRepoSwitcher />
       </div>
     </div>
   );

@@ -22,35 +22,49 @@ const toHslSpace = converter("hsl");
 const toRgbSpace = converter("rgb");
 const toOklchSpace = converter("oklch");
 
-// ─── Shadcn-style "H S% L%" unquoted string ──────────────────────────────────
-const SHADCN_PATTERN = /^(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)%\s+(\d+(?:\.\d+)?)%$/;
+// ─── Shadcn-style "H S% L%" unquoted string (with optional / alpha) ───────────
+const SHADCN_PATTERN =
+  /^(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)%\s+(\d+(?:\.\d+)?)%(?:\s*\/\s*([\d.]+))?$/;
+
+// hsl(var(--token) / 0.5)  rgb(var(--rgb)) oklch(var(--ok)) etc.
+const CHANNEL_VAR_PATTERN =
+  /^(hsl|hsla|rgb|rgba|oklch|oklab)\(\s*var\(([^,)]+)(?:,([^)]+))?\)\s*(?:\/\s*([^)]+)\s*)?\)$/i;
 
 /**
- * Normalise any CSS color string (including shadcn "H S% L%" bare format
- * and var(--foo) references) into a culori Color object, or null.
+ * Normalise any CSS color string (including shadcn "H S% L%" bare format,
+ * var(--foo) references, var(--foo, fallback) fallback chains, and Tailwind
+ * v4 alpha-channel shorthand like `hsl(var(--primary) / 0.5)`) into a culori
+ * Color object, or null.
  */
 function parseSafe(
   value: string,
-  varMap?: Record<string, string>
+  varMap?: Record<string, string>,
+  depth = 0,
 ): Color | null {
-  if (!value) return null;
+  if (!value || depth > 4) return null;
   const trimmed = value.trim();
 
-  // Resolve CSS variable references
-  if (trimmed.startsWith("var(")) {
-    if (!varMap) return null;
-    const match = trimmed.match(/^var\(([^,)]+)(?:,([^)]+))?\)/);
-    if (!match) return null;
-    const varName = match[1].trim();
-    const resolved = varMap[varName];
-    if (!resolved) return null;
-    return parseSafe(resolved, varMap);
-  }
-
-  // Shadcn bare "H S% L%" format — wrap in hsl()
-  const shadcn = trimmed.match(SHADCN_PATTERN);
-  if (shadcn) {
-    const wrapped = `hsl(${shadcn[1]} ${shadcn[2]}% ${shadcn[3]}%)`;
+  // hsl(var(--x) / 0.5) etc. — resolve the inner var, then re-wrap.
+  const channelVar = trimmed.match(CHANNEL_VAR_PATTERN);
+  if (channelVar) {
+    const fn = channelVar[1].toLowerCase();
+    const innerName = channelVar[2].trim();
+    const innerFallback = channelVar[3]?.trim();
+    const alpha = channelVar[4]?.trim();
+    let inner: string | undefined = varMap?.[innerName] ?? innerFallback;
+    if (!inner) return null;
+    inner = inner.trim();
+    // If the inner is itself bare H S% L%, leave the channels as-is so we can
+    // wrap with `hsl(...)`. Otherwise resolve recursively into a hex.
+    let inside = inner;
+    if (!new RegExp(`^${fn}|^[0-9.\\s%]`).test(inner)) {
+      const resolved = parseSafe(inner, varMap, depth + 1);
+      if (resolved) {
+        const hex = formatHex(resolved);
+        if (hex) inside = hex;
+      }
+    }
+    const wrapped = alpha != null ? `${fn}(${inside} / ${alpha})` : `${fn}(${inside})`;
     try {
       return parse(wrapped) ?? null;
     } catch {
@@ -58,7 +72,31 @@ function parseSafe(
     }
   }
 
-  // Try standard CSS parsing
+  // var(--foo) or var(--foo, fallback)
+  if (trimmed.startsWith("var(")) {
+    const match = trimmed.match(/^var\(([^,)]+)(?:,([^)]+))?\)/);
+    if (!match) return null;
+    const varName = match[1].trim();
+    const fallback = match[2]?.trim();
+    const resolved = varMap?.[varName] ?? fallback;
+    if (!resolved) return null;
+    return parseSafe(resolved, varMap, depth + 1);
+  }
+
+  // Shadcn bare "H S% L%" or "H S% L% / A"
+  const shadcn = trimmed.match(SHADCN_PATTERN);
+  if (shadcn) {
+    const [, h, s, l, a] = shadcn;
+    const wrapped = a != null
+      ? `hsla(${h}, ${s}%, ${l}%, ${a})`
+      : `hsl(${h} ${s}% ${l}%)`;
+    try {
+      return parse(wrapped) ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   try {
     return parse(trimmed) ?? null;
   } catch {
@@ -130,7 +168,8 @@ export function toRgbString(
 }
 
 /**
- * Convert to "oklch(L C H)" string, or undefined if not oklch source.
+ * Convert any parsable color to "oklch(L C H)" string. Returns undefined
+ * only when the input cannot be parsed as a color at all.
  */
 export function toOklchString(
   value: string,
@@ -138,7 +177,6 @@ export function toOklchString(
 ): string | undefined {
   const color = parseSafe(value, varMap);
   if (!color) return undefined;
-  if (color.mode !== "oklch") return undefined;
   try {
     const ok = toOklchSpace(color) as ColorOklch;
     if (!ok) return undefined;

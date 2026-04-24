@@ -318,6 +318,8 @@ function flattenObject(
       keyStr = prop.key.name;
     } else if (t.isStringLiteral(prop.key)) {
       keyStr = prop.key.value;
+    } else if (t.isNumericLiteral(prop.key)) {
+      keyStr = String(prop.key.value);
     } else {
       continue;
     }
@@ -328,6 +330,72 @@ function flattenObject(
     } else {
       const str = nodeToString(val, rawCode);
       if (str !== null) result[fullKey] = str;
+    }
+  }
+  return result;
+}
+
+/**
+ * Color-aware flatten that preserves the canonical Tailwind color scheme:
+ *
+ *   primary: { DEFAULT: "#…", foreground: "#…" }
+ *
+ * becomes `{ primary: "#…", "primary-foreground": "#…" }` instead of
+ * `{ "primary-DEFAULT": "#…", "primary-foreground": "#…" }`. This lets the
+ * Colors panel and `pickProjectTintColor` identify `primary` correctly.
+ */
+function flattenColors(
+  node: t.ObjectExpression,
+  rawCode: string,
+  prefix = ""
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const prop of node.properties) {
+    if (!t.isObjectProperty(prop)) continue;
+    let keyStr: string;
+    if (t.isIdentifier(prop.key)) {
+      keyStr = prop.key.name;
+    } else if (t.isStringLiteral(prop.key)) {
+      keyStr = prop.key.value;
+    } else if (t.isNumericLiteral(prop.key)) {
+      keyStr = String(prop.key.value);
+    } else {
+      continue;
+    }
+
+    const val = prop.value;
+
+    if (t.isObjectExpression(val)) {
+      const nestedPrefix = prefix ? `${prefix}-${keyStr}` : keyStr;
+      // Promote { DEFAULT } so `colors.primary.DEFAULT` => `primary`.
+      for (const sub of val.properties) {
+        if (!t.isObjectProperty(sub)) continue;
+        const subKey = t.isIdentifier(sub.key)
+          ? sub.key.name
+          : t.isStringLiteral(sub.key)
+            ? sub.key.value
+            : t.isNumericLiteral(sub.key)
+              ? String(sub.key.value)
+              : null;
+        if (!subKey) continue;
+        if (subKey === "DEFAULT" && !t.isObjectExpression(sub.value)) {
+          const str = nodeToString(sub.value, rawCode);
+          if (str !== null) result[nestedPrefix] = str;
+        }
+      }
+      // Then recurse for the rest of the keys.
+      const inner = flattenColors(val, rawCode, nestedPrefix);
+      for (const [k, v] of Object.entries(inner)) {
+        // Avoid emitting `${parent}-DEFAULT`.
+        if (k === `${nestedPrefix}-DEFAULT`) continue;
+        result[k] = v;
+      }
+    } else {
+      const str = nodeToString(val, rawCode);
+      if (str !== null) {
+        const fullKey = prefix ? `${prefix}-${keyStr}` : keyStr;
+        result[fullKey] = str;
+      }
     }
   }
   return result;
@@ -467,10 +535,10 @@ export function parseTailwindConfig(
         }
       }
     }
-    // Colors specially
+    // Colors specially — preserve canonical names for `{ DEFAULT, … }` shapes.
     const colorsNode = getObjectKey(themeNode, "colors");
     if (colorsNode && t.isObjectExpression(colorsNode)) {
-      merged.colors = flattenObject(colorsNode, source);
+      merged.colors = flattenColors(colorsNode, source);
     }
   }
 
@@ -479,7 +547,10 @@ export function parseTailwindConfig(
     for (const key of THEME_KEYS) {
       const keyNode = getObjectKey(extendNode, key as string);
       if (keyNode && t.isObjectExpression(keyNode)) {
-        const vals = flattenObject(keyNode, source);
+        const vals =
+          key === "colors"
+            ? flattenColors(keyNode, source)
+            : flattenObject(keyNode, source);
         const existing = (mergedRec[key as string] as ThemeValueMap) ?? {};
         mergedRec[key as string] = { ...existing, ...vals };
       }

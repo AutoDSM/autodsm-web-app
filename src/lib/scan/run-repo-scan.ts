@@ -1,16 +1,18 @@
 import "server-only";
 import {
   type GitHubFetchOptions,
-  fetchRepoMeta,
+  fetchManyBuffer,
+  fetchManyText,
+  fetchRepoMetaDetailed,
   fetchTree,
-  fetchFileText,
-  fetchFileBuffer,
 } from "@/lib/github/fetch";
+import { resolveGitHubAuth } from "@/lib/github/auth";
 import { buildBrandProfile } from "@/lib/extract";
 import type { FontFileInput } from "@/lib/extract";
 import type { AssetFile } from "@/lib/extract";
 import type { Session, SupabaseClient, User } from "@supabase/supabase-js";
 import { withUploadedAssetUrls } from "./brand-assets-storage";
+import { selectProjectRoot } from "./select-project-root";
 
 const MAX_CSS_FILES = 12;
 const MAX_LAYOUT_FILES = 6;
@@ -34,6 +36,22 @@ function rankCssPath(p: string): number {
   if (/tailwind.*\.css$/.test(lp)) return 1;
   if (/styles?\/.*\.css$/.test(lp)) return 2;
   if (/src\/.*\.css$/.test(lp)) return 3;
+  return 5;
+}
+
+/**
+ * Sort assets so the most likely brand logos / Next.js icon conventions land
+ * before the noise (random PNGs, screenshots, …) and survive the
+ * `MAX_ASSET_FILES` slice.
+ */
+function rankAssetPath(p: string): number {
+  const lp = p.toLowerCase();
+  if (/(^|\/)logo[^/]*\.(svg|png|webp)$/.test(lp)) return 0;
+  if (/(^|\/)wordmark[^/]*\.(svg|png|webp)$/.test(lp)) return 0;
+  if (/(^|\/)brand[^/]*\.(svg|png|webp)$/.test(lp)) return 1;
+  if (/(^|\/)app\/(icon|apple-icon|favicon|opengraph-image|twitter-image)\b/.test(lp)) return 1;
+  if (/(^|\/)favicon\.(ico|png|svg)$/.test(lp)) return 2;
+  if (/\.svg$/.test(lp)) return 3;
   return 5;
 }
 
@@ -65,13 +83,47 @@ export async function runRepoScan(
   }
 ): Promise<RunRepoScanResult> {
   const t0 = Date.now();
-  const ghOpts: GitHubFetchOptions = {
-    userAccessToken: session?.provider_token ?? null,
-  };
 
-  const meta = await fetchRepoMeta(owner, name, ghOpts);
-  if (!meta) {
-    scanLog("meta_failed", { reason: "not_accessible" });
+  const auth = await resolveGitHubAuth(
+    supabase,
+    owner,
+    name,
+    session?.provider_token ?? null,
+  );
+  scanLog("auth_resolved", { source: auth.source });
+  const ghOpts: GitHubFetchOptions = { auth };
+
+  const metaResult = await fetchRepoMetaDetailed(owner, name, ghOpts);
+  if (!metaResult.meta) {
+    const code = metaResult.error;
+    scanLog("meta_failed", { reason: code });
+    if (code === "rate_limited") {
+      await markScanError(
+        "GitHub rate limit hit. Try again in a few minutes, or sign in with GitHub for a higher quota."
+      );
+      return {
+        kind: "error",
+        status: 429,
+        body: {
+          error: "GitHub rate limit hit. Try again shortly.",
+          errorCode: "rate_limited",
+        },
+      };
+    }
+    if (code === "unauthorized" || code === "forbidden") {
+      await markScanError(
+        "Couldn't access this repository. Reconnect with GitHub or install the autoDSM app on the org."
+      );
+      return {
+        kind: "error",
+        status: 401,
+        body: {
+          error: "Couldn't access this repository.",
+          errorCode: "repo_inaccessible",
+          needsGitHubReauth: true,
+        },
+      };
+    }
     await markScanError(
       "Repository not found or not accessible. For private repos, sign in with GitHub (OAuth) or ensure the repo exists."
     );
@@ -85,6 +137,7 @@ export async function runRepoScan(
       },
     };
   }
+  const meta = metaResult.meta;
 
   const rawTree = await fetchTree(owner, name, meta.sha, ghOpts);
   const tree: TreeEntry[] = rawTree.map((t) => ({
@@ -100,88 +153,45 @@ export async function runRepoScan(
     };
   }
 
-  const pkgJsonEntry = tree.find(
-    (e) => e.path === "package.json" || e.path.endsWith("/package.json")
-  );
-  if (!pkgJsonEntry) {
-    await writeRepoUnsupported(
-      supabase,
-      user.id,
-      meta,
-      "no-package-json"
-    );
-    return { kind: "unsupported", body: { unsupported: "no-package-json" } };
+  const root = await selectProjectRoot(owner, name, meta.sha, tree, ghOpts);
+  if (!root) {
+    await writeRepoUnsupported(supabase, user.id, meta, "no-react");
+    return { kind: "unsupported", body: { unsupported: "no-react" } };
   }
+  scanLog("project_root", { root: root.projectRoot || "<repo-root>" });
 
-  const pkgSource = await fetchFileText(
-    owner,
-    name,
-    pkgJsonEntry.path,
-    meta.sha,
-    ghOpts
-  );
-  if (!pkgSource) {
-    await markScanError("Could not read package.json.");
-    return {
-      kind: "error",
-      status: 500,
-      body: { error: "Could not read package.json." },
-    };
-  }
-  let pkg: {
-    dependencies?: Record<string, string>;
-    devDependencies?: Record<string, string>;
-    peerDependencies?: Record<string, string>;
-  };
-  try {
-    pkg = JSON.parse(pkgSource);
-  } catch {
-    await writeRepoUnsupported(
-      supabase,
-      user.id,
-      meta,
-      "invalid-package-json"
-    );
-    return { kind: "unsupported", body: { unsupported: "invalid-package-json" } };
-  }
+  const projectRoot = root.projectRoot;
+  const rootPrefix = projectRoot ? `${projectRoot}/` : "";
+  const inRoot = (p: string): boolean =>
+    !projectRoot ? true : p === projectRoot || p.startsWith(rootPrefix);
+
   const allDeps = {
-    ...(pkg.dependencies ?? {}),
-    ...(pkg.devDependencies ?? {}),
-    ...(pkg.peerDependencies ?? {}),
+    ...(root.pkg.dependencies ?? {}),
+    ...(root.pkg.devDependencies ?? {}),
+    ...(root.pkg.peerDependencies ?? {}),
   };
   const hasReact = "react" in allDeps;
-  const hasTs = "typescript" in allDeps || hasTsxOrTs(tree);
+  const hasTs = "typescript" in allDeps || hasTsxOrTs(tree.filter((e) => inRoot(e.path)));
 
   if (!hasReact) {
     await writeRepoUnsupported(supabase, user.id, meta, "no-react");
     return { kind: "unsupported", body: { unsupported: "no-react" } };
   }
   if (!hasTs) {
-    await writeRepoUnsupported(
-      supabase,
-      user.id,
-      meta,
-      "no-typescript"
-    );
+    await writeRepoUnsupported(supabase, user.id, meta, "no-typescript");
     return { kind: "unsupported", body: { unsupported: "no-typescript" } };
   }
 
-  const tailwindEntry = tree.find((e) =>
-    /(^|\/)tailwind\.config\.(ts|js|cjs|mjs)$/.test(e.path)
+  const tailwindEntry = tree.find(
+    (e) =>
+      inRoot(e.path) &&
+      /(^|\/)tailwind\.config\.(ts|js|cjs|mjs)$/.test(e.path),
   );
-  const tailwindConfigSource = tailwindEntry
-    ? (await fetchFileText(
-        owner,
-        name,
-        tailwindEntry.path,
-        meta.sha,
-        ghOpts
-      )) ?? undefined
-    : undefined;
 
   const cssEntries = tree
     .filter(
       (e) =>
+        inRoot(e.path) &&
         (e.path.endsWith(".css") ||
           e.path.endsWith(".scss") ||
           e.path.endsWith(".sass")) &&
@@ -191,85 +201,115 @@ export async function runRepoScan(
     .sort((a, b) => rankCssPath(a.path) - rankCssPath(b.path))
     .slice(0, MAX_CSS_FILES);
 
-  const cssSources: Array<{ path: string; content: string }> = [];
-  for (const entry of cssEntries) {
-    const content = await fetchFileText(
-      owner,
-      name,
-      entry.path,
-      meta.sha,
-      ghOpts
-    );
-    if (content) cssSources.push({ path: entry.path, content });
-  }
-
   const shadcnEntry = tree.find(
-    (e) => e.path === "components.json" || e.path.endsWith("/components.json")
+    (e) =>
+      inRoot(e.path) &&
+      (e.path === "components.json" || e.path.endsWith("/components.json")),
   );
-  const shadcnJson = shadcnEntry
-    ? (await fetchFileText(
-        owner,
-        name,
-        shadcnEntry.path,
-        meta.sha,
-        ghOpts
-      )) ?? undefined
-    : undefined;
 
+  // Layout/font sources include both Next App Router and a few common Vite/React patterns,
+  // optionally rooted under the project root. Allow `(group)` and `[locale]` segments.
+  const segment = "[A-Za-z0-9_\\-\\(\\)\\[\\]]+";
+  const layoutRe = new RegExp(
+    `^${rootPrefix.replace(/\//g, "\\/")}(?:src\\/)?` +
+      `(?:` +
+      `(?:app(?:\\/${segment})*\\/(?:layout|page|template))` +
+      `|(?:pages\\/(?:_app|_document|index))` +
+      `|(?:main|index)` +
+      `|(?:app)` +
+      `)\\.(?:ts|tsx|js|jsx)$`,
+  );
   const layoutCandidates = tree
-    .filter((e) =>
-      /(^|\/)(app\/layout|app\/_app|pages\/_app|src\/main|src\/app\/layout)\.(ts|tsx|js|jsx)$/.test(
-        e.path
-      )
-    )
+    .filter((e) => inRoot(e.path) && layoutRe.test(e.path))
     .slice(0, MAX_LAYOUT_FILES);
-  const layoutFiles: FontFileInput[] = [];
-  for (const entry of layoutCandidates) {
-    const content = await fetchFileText(
-      owner,
-      name,
-      entry.path,
-      meta.sha,
-      ghOpts
-    );
-    if (content) layoutFiles.push({ path: entry.path, content });
-  }
 
   const assetExtRe = /\.(svg|png|jpe?g|webp|ico|gif)$/i;
   const assetCandidates = tree
-    .filter(
-      (e) =>
-        assetExtRe.test(e.path) &&
-        (e.path.startsWith("public/") ||
-          e.path.includes("/public/") ||
-          e.path.startsWith("src/assets/") ||
-          e.path.includes("/src/assets/")) &&
-        e.size > 0 &&
-        e.size < 2_000_000
-    )
+    .filter((e) => {
+      if (!inRoot(e.path)) return false;
+      if (!assetExtRe.test(e.path)) return false;
+      if (e.size <= 0 || e.size >= 2_000_000) return false;
+      const lp = e.path.toLowerCase();
+      const inAssetDir =
+        lp.includes("/public/") ||
+        lp.startsWith("public/") ||
+        lp.includes("/src/assets/") ||
+        lp.startsWith("src/assets/") ||
+        lp.includes("/assets/") ||
+        lp.includes("/images/") ||
+        lp.includes("/img/") ||
+        lp.includes("/media/") ||
+        lp.includes("/static/") ||
+        lp.includes("/branding/") ||
+        // Next.js root icon conventions (app/icon.png, app/favicon.ico, …)
+        /(^|\/)app\/(icon|apple-icon|favicon|opengraph-image|twitter-image)/.test(lp);
+      return inAssetDir;
+    })
+    .sort((a, b) => rankAssetPath(a.path) - rankAssetPath(b.path))
     .slice(0, MAX_ASSET_FILES);
 
-  const assetFiles: AssetFile[] = [];
-  for (const entry of assetCandidates) {
-    const buf = await fetchFileBuffer(
+  // Parallel fetches: tailwind config, components.json, all CSS, all layouts,
+  // and all asset buffers.
+  const textPaths: string[] = [];
+  if (tailwindEntry) textPaths.push(tailwindEntry.path);
+  if (shadcnEntry) textPaths.push(shadcnEntry.path);
+  textPaths.push(...cssEntries.map((e) => e.path));
+  textPaths.push(...layoutCandidates.map((e) => e.path));
+
+  const [textResults, bufResults] = await Promise.all([
+    fetchManyText(owner, name, textPaths, meta.sha, ghOpts, 6),
+    fetchManyBuffer(
       owner,
       name,
-      entry.path,
+      assetCandidates.map((e) => e.path),
       meta.sha,
-      ghOpts
-    );
-    if (buf) assetFiles.push({ path: entry.path, buffer: buf });
+      ghOpts,
+      6,
+    ),
+  ]);
+
+  const textByPath = new Map<string, string | null>();
+  for (const r of textResults) textByPath.set(r.path, r.content);
+
+  const tailwindConfigSource = tailwindEntry
+    ? textByPath.get(tailwindEntry.path) ?? undefined
+    : undefined;
+  const shadcnJson = shadcnEntry
+    ? textByPath.get(shadcnEntry.path) ?? undefined
+    : undefined;
+  const cssSources: Array<{ path: string; content: string }> = [];
+  for (const entry of cssEntries) {
+    const content = textByPath.get(entry.path);
+    if (content) cssSources.push({ path: entry.path, content });
   }
+  const layoutFiles: FontFileInput[] = [];
+  for (const entry of layoutCandidates) {
+    const content = textByPath.get(entry.path);
+    if (content) layoutFiles.push({ path: entry.path, content });
+  }
+
+  const assetFiles: AssetFile[] = [];
+  for (const r of bufResults) {
+    if (r.buffer) assetFiles.push({ path: r.path, buffer: r.buffer });
+  }
+
+  scanLog("fetched", {
+    css: String(cssSources.length),
+    layouts: String(layoutFiles.length),
+    assets: String(assetFiles.length),
+    tailwind: tailwindConfigSource ? "1" : "0",
+    shadcn: shadcnJson ? "1" : "0",
+  });
 
   let profile: Awaited<ReturnType<typeof buildBrandProfile>>;
   let scanDurationMs = 0;
   try {
     const built = await buildBrandProfile({
       repo: { owner, name, url: meta.url },
-      tailwindConfigSource,
+      tailwindConfigSource: tailwindConfigSource ?? undefined,
       tailwindConfigPath: tailwindEntry?.path,
       cssSources,
-      shadcnJson,
+      shadcnJson: shadcnJson ?? undefined,
       shadcnConfigPath: shadcnEntry?.path,
       assetFiles,
       layoutFiles,
@@ -290,6 +330,7 @@ export async function runRepoScan(
         ...built.meta,
         projectName,
         lastScanDurationMs: scanDurationMs,
+        projectRoot,
       },
     };
     profile = await withUploadedAssetUrls(
@@ -302,12 +343,16 @@ export async function runRepoScan(
     );
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";
-    scanLog("extraction_failed", { reason: message.slice(0, 120) });
-    await markScanError(`Extraction failed: ${message.slice(0, 300)}`);
+    const friendly = friendlyExtractionError(message);
+    scanLog("extraction_failed", {
+      reason: message.slice(0, 120),
+      friendly,
+    });
+    await markScanError(friendly);
     return {
       kind: "error",
       status: 500,
-      body: { error: `Extraction failed: ${message}` },
+      body: { error: friendly, errorCode: "extraction_failed" },
     };
   }
 
@@ -335,6 +380,11 @@ export async function runRepoScan(
       scan_status: "completed",
       unsupported_reason: null,
       brand_profile: profile,
+      project_root: projectRoot || null,
+      tint_hex: profile.meta?.tintHex ?? null,
+      primary_logo_path: profile.meta?.primaryLogoPath ?? null,
+      assets_storage_warning: profile.meta?.assetsStorageWarning ?? null,
+      extractor_version: profile.meta?.extractorVersion ?? null,
     },
     { onConflict: "user_id,owner,name" }
   );
@@ -361,6 +411,26 @@ export async function runRepoScan(
     name: meta.name,
     durationMs: scanDurationMs,
   };
+}
+
+/**
+ * Map raw extractor / dependency errors to a short, user-friendly sentence
+ * shown on the dashboard banner. Falls back to a truncated raw message so we
+ * still surface something useful in unfamiliar cases.
+ */
+function friendlyExtractionError(raw: string): string {
+  const lower = raw.toLowerCase();
+  if (lower.includes("unexpected token") || lower.includes("babel"))
+    return "We couldn't parse one of your config files. Run a build locally to confirm syntax, then rescan.";
+  if (lower.includes("sharp") || lower.includes("vips"))
+    return "An image asset couldn't be decoded. Re-export the asset (PNG/WebP) and rescan.";
+  if (lower.includes("rate limit") || lower.includes("rate-limited") || lower.includes("403"))
+    return "GitHub rate limit hit during the scan. Try again in a few minutes.";
+  if (lower.includes("not found") || lower.includes("404"))
+    return "Some files referenced by the project couldn't be fetched from GitHub. Try rescanning.";
+  if (lower.includes("bucket"))
+    return "Brand asset Storage isn't configured yet. Tokens were extracted but logos/images aren't uploaded.";
+  return `Extraction failed: ${raw.slice(0, 240)}`;
 }
 
 async function writeRepoUnsupported(

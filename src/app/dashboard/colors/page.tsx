@@ -15,18 +15,33 @@ import {
 } from "@/components/dashboard/brand-token-page-layout";
 import { CompactColorTokenRow } from "@/components/dashboard/compact-color-token-row";
 import { brandDashboardCardRadius } from "@/components/ui/brand-card-tokens";
+function isForeground(c: BrandColor): boolean {
+  return /-(foreground|fg|text)$/i.test(c.name);
+}
+
 function filterPalette(
   all: BrandColor[],
   kind: "primary" | "secondary",
+  tintHex?: string,
 ): BrandColor[] {
-  const out =
-    kind === "primary"
-      ? all.filter(
-          (c) => c.group === "brand" || /primary/i.test(c.name),
-        )
-      : all.filter(
-          (c) => c.group === "accent" || /secondary/i.test(c.name),
-        );
+  let out: BrandColor[];
+  if (kind === "primary") {
+    out = all.filter(
+      (c) =>
+        !isForeground(c) &&
+        (c.group === "brand" ||
+          /primary/i.test(c.name) ||
+          (tintHex
+            ? c.value?.toLowerCase() === tintHex.toLowerCase()
+            : false)),
+    );
+  } else {
+    out = all.filter(
+      (c) =>
+        !isForeground(c) &&
+        (c.group === "accent" || /secondary/i.test(c.name)),
+    );
+  }
   return [...out].sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -85,8 +100,8 @@ export default function ColorsPage() {
     );
   }
 
-  const primary = filterPalette(profile.colors, "primary");
-  const secondary = filterPalette(profile.colors, "secondary");
+  const primary = filterPalette(profile.colors, "primary", profile.meta.tintHex);
+  const secondary = filterPalette(profile.colors, "secondary", profile.meta.tintHex);
   const byGroup = profile.colors;
 
   return (

@@ -199,6 +199,14 @@ export interface BrandProfileMeta {
   extractorVersion?: number;
   /** Wall-clock time of the last successful scan (ms), when recorded. */
   lastScanDurationMs?: number;
+  /** Selected project root inside the repo (e.g. "apps/web"); empty for repo root. */
+  projectRoot?: string;
+  /** Cached primary tint color (hex) chosen at scan time so SSR matches CSR. */
+  tintHex?: string;
+  /** Repo-relative path of the picked brand logo. */
+  primaryLogoPath?: string;
+  /** Non-fatal Storage condition surfaced to the dashboard banner. */
+  assetsStorageWarning?: "bucket-missing" | "bucket-private" | "upload-failed";
 }
 
 export interface BrandProfile {

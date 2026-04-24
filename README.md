@@ -30,6 +30,22 @@ The public GitHub API allows 60 requests per hour per IP. For any real repo you'
 1. Paste a personal access token into **Settings → GitHub access**. It's stored in `localStorage` only, never sent to the server.
 2. Or set `GITHUB_API_TOKEN` in `.env.local` — the server reads it as a fallback.
 
+### Required for production scans
+
+- **`BRAND_ASSETS_BUCKET`** — name of the public Supabase Storage bucket where
+  scanned logos/icons are uploaded. The migration in
+  `supabase/migrations/20260423000000_brand_assets_storage.sql` creates the
+  default `brand-assets` bucket and the matching RLS policies. If the variable
+  is unset the scan still completes but `BrandProfile.meta.assetsStorageWarning`
+  is set to `bucket-missing` and the dashboard surfaces a banner.
+- **GitHub App env vars** — `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`,
+  `GITHUB_APP_SLUG`, `GITHUB_APP_WEBHOOK_SECRET`. The scan resolver
+  (`src/lib/github/auth.ts`) prefers an installation token, then OAuth, then
+  `GITHUB_API_TOKEN`, then anonymous.
+- **Vercel function timeout** — `vercel.json` sets `maxDuration: 300` for
+  `/api/scan` and `/api/scan/refresh` so monorepo scans have headroom on Fluid
+  Compute.
+
 ### Optional: AI repair
 
 If a component fails to render (missing provider, unresolved import, runtime error), you can click **Try AI repair** in the fallback panel. Add a Gemini API key in **Settings → AI repair key** (stored locally) or set `GEMINI_API_KEY` in `.env.local`. Uses `gemini-2.5-flash-lite` by default.

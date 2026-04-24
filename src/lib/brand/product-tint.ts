@@ -16,20 +16,62 @@ const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
 
 /**
  * Picks a single "tint" hex for the app chrome from a BrandProfile.
- * Priority: brand + primary/brand in name, then any brand, accent, else first color.
+ *
+ * Priority (skipping any name ending in `-foreground`, `-fg`, or `-text`):
+ *   1. exact `primary` (or `--primary`, `color-primary`).
+ *   2. brand group + primary/brand keyword.
+ *   3. any brand-group color.
+ *   4. accent-group color.
+ *   5. first color.
+ *
+ * `mode = "dark"` prefers the color's `darkModeHex` when available so the
+ * shell tint also flips with the theme.
  */
-export function pickProjectTintColor(profile: BrandProfile | null): string | null {
+export function pickProjectTintColor(
+  profile: BrandProfile | null,
+  mode: "light" | "dark" = "light",
+): string | null {
   if (!profile?.colors?.length) return null;
-  const { colors } = profile;
-  const brandPrimary = colors.find(
+  const isFg = (name: string) => /-(foreground|fg|text)$/i.test(name);
+  const palette = profile.colors.filter((c) => !isFg(c.name));
+  const valueOf = (c: (typeof profile.colors)[number]): string | null => {
+    if (mode === "dark" && c.darkModeHex) return c.darkModeHex;
+    return c.value || null;
+  };
+
+  const exactPrimary = palette.find(
+    (c) =>
+      c.name === "primary" ||
+      c.cssVariable === "--primary" ||
+      c.cssVariable === "--color-primary" ||
+      c.name === "color-primary",
+  );
+  if (exactPrimary) {
+    const v = valueOf(exactPrimary);
+    if (v) return v;
+  }
+
+  const brandPrimary = palette.find(
     (c) => c.group === "brand" && /primary|brand|accent|main/i.test(c.name),
   );
-  if (brandPrimary?.value) return brandPrimary.value;
-  const anyBrand = colors.find((c) => c.group === "brand");
-  if (anyBrand?.value) return anyBrand.value;
-  const anyAccent = colors.find((c) => c.group === "accent");
-  if (anyAccent?.value) return anyAccent.value;
-  return colors[0].value;
+  if (brandPrimary) {
+    const v = valueOf(brandPrimary);
+    if (v) return v;
+  }
+
+  const anyBrand = palette.find((c) => c.group === "brand");
+  if (anyBrand) {
+    const v = valueOf(anyBrand);
+    if (v) return v;
+  }
+
+  const anyAccent = palette.find((c) => c.group === "accent");
+  if (anyAccent) {
+    const v = valueOf(anyAccent);
+    if (v) return v;
+  }
+
+  return valueOf(palette[0] ?? profile.colors[0]) ?? null;
 }
 
 /**
