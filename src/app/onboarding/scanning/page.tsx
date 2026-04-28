@@ -8,9 +8,11 @@ import { ScanPhaseList } from "@/components/onboarding/scan-phase-list";
 import { useOnboarding } from "@/components/onboarding/onboarding-provider";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { isPreviewOnboardingEnabled, setPreviewOnboarding } from "@/lib/onboarding/storage";
 import { createClient } from "@/lib/supabase/client";
 import { SCAN_PHASE_ORDER, scanPhaseIndex } from "@/lib/scan/scan-phases";
+import { AlertCircle, AlertTriangle } from "lucide-react";
 
 const PREVIEW_STEPS = [
   "Fetching repository…",
@@ -28,6 +30,9 @@ type ScanStatusPayload = {
   scanStatus?: string | null;
   lastScanError?: string | null;
   counts?: Record<string, number> | null;
+  /** Present when GET /api/scan/status returns an error payload (even at 200 in edge cases). */
+  error?: string;
+  message?: string;
 };
 
 function ScanningPageInner() {
@@ -45,6 +50,10 @@ function ScanningPageInner() {
   const [scanStatus, setScanStatus] = React.useState<string | null>(null);
   const [tokenCounts, setTokenCounts] = React.useState<Record<string, number> | null>(null);
   const [repoId, setRepoId] = React.useState<string | null>(null);
+  /** GET /api/scan/status failures (HTTP or JSON error) — shown in a destructive alert for debugging. */
+  const [statusPollError, setStatusPollError] = React.useState<string | null>(null);
+  /** Server-side last_scan_error from status poll while scan may still be running or after failure. */
+  const [lastScanErrorHint, setLastScanErrorHint] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (!repo) {
@@ -89,14 +98,46 @@ function ScanningPageInner() {
           signal: controller.signal,
           cache: "no-store",
         });
-        if (!res.ok) return;
-        const body = (await res.json()) as ScanStatusPayload;
+        const text = await res.text();
+        let body: ScanStatusPayload & Record<string, unknown> = {};
+        try {
+          body = text ? (JSON.parse(text) as ScanStatusPayload & Record<string, unknown>) : {};
+        } catch {
+          body = {};
+        }
+
+        if (!res.ok) {
+          const detail =
+            typeof body.message === "string"
+              ? body.message
+              : typeof body.error === "string"
+                ? body.error
+                : text.slice(0, 1200);
+          const line = `GET /api/scan/status → HTTP ${res.status}${detail ? ` · ${detail}` : ""}`;
+          setStatusPollError(line);
+          console.error("[onboarding/scanning]", line, body);
+          return;
+        }
+
+        if (typeof body.error === "string") {
+          const line = `${body.error}${typeof body.message === "string" ? `: ${body.message}` : ""}`;
+          setStatusPollError(line);
+          console.error("[onboarding/scanning] scan/status body error", body);
+        } else {
+          setStatusPollError(null);
+        }
+
         if (body.phase != null) setScanPhase(body.phase);
         if (body.scanStatus != null) setScanStatus(body.scanStatus);
         if (body.counts) setTokenCounts(body.counts);
         if (body.repoId) setRepoId(body.repoId);
-      } catch {
-        /* aborted */
+        const lse = body.lastScanError;
+        setLastScanErrorHint(typeof lse === "string" && lse.trim() ? lse : null);
+      } catch (e) {
+        if ((e as Error).name === "AbortError") return;
+        const msg = (e as Error).message ?? String(e);
+        setStatusPollError(`GET /api/scan/status · ${msg}`);
+        console.error("[onboarding/scanning] status poll exception", e);
       }
     };
 
@@ -120,7 +161,16 @@ function ScanningPageInner() {
             );
             return;
           }
-          setError(body.error ?? `Scan failed (${res.status})`);
+          const detail =
+            typeof body.error === "string"
+              ? body.error
+              : typeof body.message === "string"
+                ? body.message
+                : "";
+          const line = `POST /api/scan → HTTP ${res.status}${detail ? ` · ${detail}` : ""}`;
+          setError(line);
+          setStatusPollError(null);
+          console.error("[onboarding/scanning]", line, body);
           setScanStatus("failed");
           return;
         }
@@ -134,12 +184,18 @@ function ScanningPageInner() {
             `/onboarding/unsupported?repo=${encodeURIComponent(repo)}&reason=${encodeURIComponent(body.unsupported)}`,
           );
         } else {
-          setError(body.error ?? "Unknown scan status");
+          const msg = body.error ?? "Unknown scan status";
+          setError(typeof msg === "string" ? msg : "Unknown scan status");
+          setStatusPollError(null);
+          console.error("[onboarding/scanning] unexpected scan response", body);
           setScanStatus("failed");
         }
       } catch (e) {
         if ((e as Error).name !== "AbortError") {
-          setError((e as Error).message);
+          const msg = (e as Error).message;
+          setError(`POST /api/scan · ${msg}`);
+          setStatusPollError(null);
+          console.error("[onboarding/scanning] scan request exception", e);
         }
       }
     })();
@@ -181,9 +237,31 @@ function ScanningPageInner() {
   }, [scanPhase]);
 
   const statusError =
-    scanStatus === "failed"
+    scanStatus === "failed" && !error
       ? "Scan didn’t finish. Check details below or edit your repository."
       : null;
+
+  /** Early phases: show errors inline under “File tree” so they sit with repository scanning (easier debugging). */
+  const isRepoScanStage =
+    !isPreview &&
+    (scanPhase === null ||
+      scanPhase === "fetch_meta" ||
+      scanPhase === "fetch_tree");
+
+  const repoStageError =
+    isRepoScanStage
+      ? statusPollError ??
+        error ??
+        lastScanErrorHint ??
+        (scanStatus === "failed" ? statusError : null)
+      : null;
+
+  const showStatusPollAlert = !isPreview && statusPollError && !isRepoScanStage;
+  const showLastScanHint =
+    !isPreview &&
+    lastScanErrorHint &&
+    (scanStatus === "failed" || scanStatus === "scanning") &&
+    !isRepoScanStage;
 
   return (
     <div className="grid min-h-0 min-w-0 flex-1 place-items-center bg-[var(--bg-primary)] px-4 py-8 sm:px-6">
@@ -196,6 +274,26 @@ function ScanningPageInner() {
             : "Building your brand book."}
         </p>
 
+        {showStatusPollAlert ? (
+          <Alert variant="destructive" className="mt-5 border-[color-mix(in_srgb,var(--error)_45%,transparent)] bg-[color-mix(in_srgb,var(--error)_10%,transparent)] text-[var(--error)] [&_[data-slot=alert-description]]:text-[var(--error)]/95">
+            <AlertCircle className="size-4 shrink-0" aria-hidden />
+            <AlertTitle>Scan status request failed</AlertTitle>
+            <AlertDescription className="break-words font-[var(--font-geist-mono)] text-[12px] leading-relaxed">
+              {statusPollError}
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {showLastScanHint ? (
+          <Alert className="mt-5 border-[color-mix(in_srgb,var(--warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--warning)_10%,transparent)] text-[var(--text-primary)]">
+            <AlertTriangle className="size-4 shrink-0 text-[var(--warning)]" aria-hidden />
+            <AlertTitle>Last scan message</AlertTitle>
+            <AlertDescription className="break-words font-[var(--font-geist-mono)] text-[12px] leading-relaxed text-[var(--text-secondary)]">
+              {lastScanErrorHint}
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
         <ScanPhaseList
           className="mt-6"
           currentPhase={isPreview ? null : scanPhase}
@@ -203,6 +301,7 @@ function ScanningPageInner() {
           previewStepIndex={isPreview ? previewLog.length : undefined}
           previewTotalSteps={isPreview ? PREVIEW_STEPS.length : undefined}
           tokenCounts={isPreview ? null : tokenCounts}
+          repoStageError={repoStageError}
         />
 
         <p className="mt-5 min-h-[1.25em] font-[var(--font-geist-mono)] text-[13px] text-[var(--text-primary)]">
@@ -211,9 +310,15 @@ function ScanningPageInner() {
 
         {error || statusError ? (
           <div className="mt-6 space-y-3">
-            <div className="rounded-lg border-0 bg-[color-mix(in_srgb,var(--error)_12%,transparent)] p-3 text-[13px] text-[var(--error)] shadow-[var(--shadow-sm)]">
-              {error ?? statusError}
-            </div>
+            {!(isRepoScanStage && repoStageError) ? (
+              <Alert variant="destructive" className="border-[color-mix(in_srgb,var(--error)_45%,transparent)] bg-[color-mix(in_srgb,var(--error)_12%,transparent)] text-[var(--error)] [&_[data-slot=alert-description]]:text-[var(--error)]/95">
+                <AlertCircle className="size-4 shrink-0" aria-hidden />
+                <AlertTitle>Scan failed</AlertTitle>
+                <AlertDescription className="break-words font-[var(--font-geist-mono)] text-[12px] leading-relaxed">
+                  {error ?? statusError}
+                </AlertDescription>
+              </Alert>
+            ) : null}
             <Button asChild variant="outline" className="w-full h-10 rounded-xl">
               <Link href="/onboarding/connect">Edit repository</Link>
             </Button>

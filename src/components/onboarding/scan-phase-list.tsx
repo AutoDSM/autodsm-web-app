@@ -26,7 +26,9 @@ import {
   CloudUpload,
   Save,
   Flag,
+  AlertCircle,
 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import {
   SCAN_PHASE_LABELS,
@@ -47,11 +49,28 @@ const PHASE_ICONS: Record<ScanPhase, React.ComponentType<{ className?: string }>
   done: Flag,
 };
 
+/** Keys for `tokenCounts` — defined before `TOKEN_CATEGORIES` to avoid a circular type reference. */
+type TokenCountKey =
+  | "colors"
+  | "typography"
+  | "spacing"
+  | "shadows"
+  | "radii"
+  | "borders"
+  | "animations"
+  | "breakpoints"
+  | "opacity"
+  | "zIndex"
+  | "gradients"
+  | "assets";
+
+type TokenCounts = Partial<Record<TokenCountKey, number>>;
+
 const TOKEN_CATEGORIES: {
   id: string;
   label: string;
   Icon: React.ComponentType<{ className?: string }>;
-  countKey: keyof TokenCounts;
+  countKey: TokenCountKey;
 }[] = [
   { id: "colors", label: "Colors", Icon: Palette, countKey: "colors" },
   { id: "typography", label: "Typography", Icon: Type, countKey: "typography" },
@@ -66,8 +85,6 @@ const TOKEN_CATEGORIES: {
   { id: "gradients", label: "Gradients", Icon: Sparkles, countKey: "gradients" },
   { id: "assets", label: "Assets", Icon: ImageIcon, countKey: "assets" },
 ];
-
-type TokenCounts = Partial<Record<(typeof TOKEN_CATEGORIES)[number]["countKey"], number>>;
 
 type RowState = "pending" | "active" | "complete" | "failed";
 
@@ -96,6 +113,8 @@ export function ScanPhaseList({
   previewStepIndex,
   previewTotalSteps,
   tokenCounts,
+  /** Shown under repository phases (metadata + file tree) when present — copy-safe details for debugging. */
+  repoStageError,
   className,
 }: {
   currentPhase: string | null;
@@ -104,6 +123,7 @@ export function ScanPhaseList({
   previewStepIndex?: number;
   previewTotalSteps?: number;
   tokenCounts?: Record<string, number> | null;
+  repoStageError?: string | null;
   className?: string;
 }) {
   const scanFailed = scanStatus === "failed";
@@ -125,7 +145,7 @@ export function ScanPhaseList({
           Scan progress
         </p>
         <ol className="space-y-0">
-          {SCAN_PHASE_ORDER.map((phase, i) => {
+          {SCAN_PHASE_ORDER.flatMap((phase, i) => {
             let state: RowState;
             if (previewMode) {
               const denom = Math.max((previewTotalSteps ?? 1) - 1, 1);
@@ -139,7 +159,7 @@ export function ScanPhaseList({
               state = phaseRowState(phase, currentPhase, scanFailed);
             }
             const Icon = PHASE_ICONS[phase];
-            return (
+            const row = (
               <li
                 key={phase}
                 className="flex gap-3 border-b border-[var(--border-subtle)] py-2.5 last:border-b-0"
@@ -187,6 +207,24 @@ export function ScanPhaseList({
                 </div>
               </li>
             );
+            if (phase !== "fetch_tree" || !repoStageError || previewMode) {
+              return [row];
+            }
+            return [
+              row,
+              <li key={`${phase}-repo-error`} className="list-none py-2">
+                <Alert
+                  variant="destructive"
+                  className="border-[color-mix(in_srgb,var(--error)_45%,transparent)] bg-[color-mix(in_srgb,var(--error)_10%,transparent)] text-[var(--error)] [&_[data-slot=alert-description]]:text-[var(--error)]/95"
+                >
+                  <AlertCircle className="size-4 shrink-0" aria-hidden />
+                  <AlertTitle>Repository scan</AlertTitle>
+                  <AlertDescription className="break-words font-[var(--font-geist-mono)] text-[12px] leading-relaxed">
+                    {repoStageError}
+                  </AlertDescription>
+                </Alert>
+              </li>,
+            ];
           })}
         </ol>
       </div>
