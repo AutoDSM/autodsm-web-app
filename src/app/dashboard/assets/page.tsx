@@ -13,6 +13,7 @@ import { TokenPagePillTabs } from "@/components/dashboard/token-page-pill-tabs";
 import { TokenCard } from "@/components/dashboard/token-card";
 import Image from "next/image";
 import type { BrandAsset } from "@/lib/brand/types";
+import { LogoUploadZone } from "@/components/brand/logo-upload-zone";
 
 const CATEGORY_ORDER: BrandAsset["category"][] = [
   "logo",
@@ -71,6 +72,14 @@ export default function AssetsPage() {
         }
         metaRight={profile?.scannedAt ? <LastUpdatedLabel scannedAt={profile.scannedAt} /> : undefined}
       >
+        {profile ? (
+          <div className="mb-8 space-y-4">
+            <p className="text-[13px] text-[var(--text-secondary)]">
+              Missing a logo? Upload one — we&apos;ll store it in your brand-assets bucket.
+            </p>
+            <LogoUploadZone />
+          </div>
+        ) : null}
         <EmptyState
           title="No assets found"
           description="We didn't find any SVGs, PNGs, or images in this repo's public or assets folders."
@@ -101,6 +110,7 @@ export default function AssetsPage() {
   }
 
   const categories = CATEGORY_ORDER.filter((c) => byCategory.has(c));
+  const hasLogo = profile.assets.some((a) => a.category === "logo");
 
   return (
     <BrandTokenPageLayout
@@ -114,6 +124,14 @@ export default function AssetsPage() {
       metaRight={<LastUpdatedLabel scannedAt={profile.scannedAt} />}
     >
       <div className="space-y-6">
+        {!hasLogo ? (
+          <div className="space-y-2">
+            <p className="text-[13px] text-[var(--text-secondary)]">
+              No logo detected in-repo — upload one for headers, exports, and brand lockups.
+            </p>
+            <LogoUploadZone />
+          </div>
+        ) : null}
         <TokenPagePillTabs
           defaultValue={categories[0]}
           tabs={categories.map((cat) => {

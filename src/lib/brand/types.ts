@@ -22,7 +22,10 @@ export interface BrandColor {
   rgb: string; // "rgb(99, 102, 241)"
   oklch?: string;
   group: ColorGroup;
+  /** File path / provenance; `"autodsm-generated"` for merged ramp rows. */
   source: string; // "globals.css:12"
+  /** When set, row was merged from AutoDSM suggestions (not extracted). */
+  fillOrigin?: "autodsm-generated";
   darkModeValue?: string;
   darkModeHex?: string;
   contrastOnWhite: number;
@@ -46,6 +49,8 @@ export interface BrandTypography {
   source: string;
   category: "heading" | "body" | "utility" | "display";
   tailwindClass?: string;
+  /** When set, row came from the deterministic typography guide merge. */
+  guideOrigin?: "autodsm-guide";
 }
 
 export interface BrandFont {
@@ -185,6 +190,7 @@ export interface BrandAsset {
   dominantColors?: string[];
   hasTransparency?: boolean;
   storageUrl?: string;
+  provenance?: "repo" | "user";
 }
 
 export interface BrandProfileMeta {
@@ -207,6 +213,19 @@ export interface BrandProfileMeta {
   primaryLogoPath?: string;
   /** Non-fatal Storage condition surfaced to the dashboard banner. */
   assetsStorageWarning?: "bucket-missing" | "bucket-private" | "upload-failed";
+  /** User choices from onboarding / dashboard token review (JSONB-only). */
+  tokenChoices?: TokenChoices;
+  /** Accepted deterministic typography guide rows (merged suggestions). */
+  typographyGuide?: import("./typography-guide").TypographyGuideEntry[];
+  /** ISO timestamp of last token review session. */
+  lastReviewedAt?: string;
+}
+
+/** Persisted under brand_profile.meta.tokenChoices */
+export interface TokenChoices {
+  acceptedSuggestions: string[];
+  dismissed: string[];
+  reviewedAt: string;
 }
 
 export interface BrandProfile {

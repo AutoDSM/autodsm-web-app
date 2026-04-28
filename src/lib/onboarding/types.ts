@@ -21,7 +21,8 @@ export type OnboardingStepKey =
   | "team"
   | "company"
   | "connect"
-  | "scanning";
+  | "scanning"
+  | "review";
 
 export interface OnboardingDraft {
   displayName: string;
@@ -35,7 +36,7 @@ export interface OnboardingDraft {
   /** From connect; used as scan project label; synced to DB as intended_project_name */
   projectName: string;
   /**
-   * Last saved position from the server: welcome, role, team, company, connect, scanning
+   * Last saved position from the server: welcome, role, team, company, connect, scanning, review
    * (value means “user should land on or just completed this part of the flow” per API contract).
    */
   currentStep: OnboardingStepKey | "";

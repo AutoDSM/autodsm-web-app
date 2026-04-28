@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import DOMPurify from "isomorphic-dompurify";
+import { sanitizeSvg } from "@/lib/brand/sanitize-svg";
 import type { BrandAsset, BrandProfile } from "@/lib/brand/types";
 import type { AssetFile } from "@/lib/extract";
 
@@ -22,23 +22,6 @@ function contentTypeFor(asset: BrandAsset): string {
       return "image/svg+xml";
     default:
       return "application/octet-stream";
-  }
-}
-
-function sanitizeSvg(buffer: Buffer): Buffer | null {
-  try {
-    const raw = buffer.toString("utf-8");
-    const safe = DOMPurify.sanitize(raw, {
-      USE_PROFILES: { svg: true, svgFilters: true },
-      // Drop any dangerous bits even if the SVG profile would otherwise allow.
-      FORBID_TAGS: ["script", "foreignObject"],
-      FORBID_ATTR: ["onload", "onclick", "onerror", "onmouseover"],
-      ALLOW_DATA_ATTR: false,
-    });
-    if (!safe || !safe.includes("<svg")) return null;
-    return Buffer.from(safe, "utf-8");
-  } catch {
-    return null;
   }
 }
 

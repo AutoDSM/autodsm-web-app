@@ -1,10 +1,11 @@
-import { createRouteHandlerClient } from "@/lib/supabase/route-handler-client";
+import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler-client";
 import { getOAuthRedirectOrigin } from "@/lib/supabase/oauth-redirect";
 import { getSupabasePublicKey, getSupabaseUrl } from "@/lib/supabase/env";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
- * Server-side OAuth start (PKCE cookies on the response). Avoids client-only cookie edge cases.
+ * Server-side OAuth start (PKCE cookies on the redirect response).
+ * Cookie writes must be merged onto `NextResponse.redirect` — see `createSupabaseRouteHandlerClient`.
  * @see https://supabase.com/docs/guides/auth/server-side/nextjs
  */
 export async function GET(request: NextRequest) {
@@ -25,8 +26,11 @@ export async function GET(request: NextRequest) {
   }
 
   let supabase;
+  let applyCookies: (r: NextResponse) => NextResponse;
   try {
-    supabase = await createRouteHandlerClient();
+    const ctx = createSupabaseRouteHandlerClient(request);
+    supabase = ctx.supabase;
+    applyCookies = ctx.applyCookies;
   } catch {
     return NextResponse.redirect(
       new URL(
@@ -43,7 +47,6 @@ export async function GET(request: NextRequest) {
     provider,
     options: {
       redirectTo,
-      // repo: list + read private content; read:user + email for profile
       scopes:
         provider === "github"
           ? "read:user user:email repo"
@@ -63,5 +66,5 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return NextResponse.redirect(data.url);
+  return applyCookies(NextResponse.redirect(data.url));
 }

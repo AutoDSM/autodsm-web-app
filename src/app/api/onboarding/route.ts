@@ -16,6 +16,7 @@ const stepValues = new Set<OnboardingStepKey>([
   "company",
   "connect",
   "scanning",
+  "review",
 ]);
 
 const patchBody = z

@@ -37,6 +37,11 @@ function familyLabel(fontFamily: string): string {
   return fontFamily.split(",")[0]?.replace(/['"]/g, "").trim() || "UI Sans";
 }
 
+function sampleLabelForToken(t: BrandTypography): string {
+  const base = familyLabel(t.fontFamily);
+  return t.guideOrigin === "autodsm-guide" ? `${base} · autoDSM guide` : base;
+}
+
 function tokenPreviewStyle(t: BrandTypography): React.CSSProperties {
   return {
     fontFamily: t.fontFamily,
@@ -162,7 +167,7 @@ export default function TypographyPage() {
                 <TypographyContainerCard
                   key={t.name + t.fontSizePx}
                   eyebrow={t.name}
-                  sampleLabel={familyLabel(t.fontFamily)}
+                  sampleLabel={sampleLabelForToken(t)}
                   displayText="Aa"
                   previewAs="div"
                   previewAriaLabel={`${t.name} typographic preview`}
@@ -183,7 +188,7 @@ export default function TypographyPage() {
                 <TypographyBodyCard
                   key={t.name + t.fontSizePx}
                   eyebrow={t.name}
-                  sampleLabel={familyLabel(t.fontFamily)}
+                  sampleLabel={sampleLabelForToken(t)}
                   body={CARD_LOREM}
                   bodyStyle={tokenPreviewStyle(t)}
                   tabs={metricTabsForToken(t, tabIconProps)}
@@ -206,7 +211,7 @@ export default function TypographyPage() {
                 <TypographyBodyCard
                   key={t.name + t.fontSizePx}
                   eyebrow={t.name}
-                  sampleLabel={familyLabel(t.fontFamily)}
+                  sampleLabel={sampleLabelForToken(t)}
                   body={CARD_LOREM}
                   bodyStyle={tokenPreviewStyle(t)}
                   tabs={metricTabsForToken(t, tabIconProps)}

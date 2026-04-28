@@ -1,0 +1,46 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`generateColorScale > matches snapshots for known brand inputs 1`] = `
+{
+  "100": "#f8d6ff",
+  "200": "#edb1ff",
+  "300": "#d397ff",
+  "400": "#b376ff",
+  "50": "#fcebff",
+  "500": "#9b5bf5",
+  "600": "#8f23fa",
+  "700": "#6d21be",
+  "800": "#52009c",
+  "900": "#3a007c",
+}
+`;
+
+exports[`generateColorScale > matches snapshots for known brand inputs 2`] = `
+{
+  "100": "#ffc7bd",
+  "200": "#ff988f",
+  "300": "#ff7d76",
+  "400": "#ff5b57",
+  "50": "#ffe3dc",
+  "500": "#e93e3f",
+  "600": "#ef4444",
+  "700": "#af0007",
+  "800": "#8b0000",
+  "900": "#680000",
+}
+`;
+
+exports[`generateColorScale > matches snapshots for known brand inputs 3`] = `
+{
+  "100": "#b9ebff",
+  "200": "#89d2ff",
+  "300": "#71b7ff",
+  "400": "#5295ff",
+  "50": "#dbf6ff",
+  "500": "#3b7bff",
+  "600": "#2563eb",
+  "700": "#0946cd",
+  "800": "#0021ab",
+  "900": "#010089",
+}
+`;

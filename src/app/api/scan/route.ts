@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     return { message: String(e).slice(0, 500) };
   };
 
-  const scanLog = (event: string, fields?: Record<string, string | undefined>) => {
+  const scanLog = (event: string, fields?: Record<string, unknown>) => {
     if (process.env.NODE_ENV === "development") {
       console.info("[scan]", event, fields ?? "");
     } else {
@@ -74,7 +74,25 @@ export async function POST(req: NextRequest) {
       { user_id: user.id, last_scan_error: message.slice(0, 500) },
       { onConflict: "user_id" }
     );
+    await supabase
+      .from("brand_repos")
+      .update({ scan_status: "failed" })
+      .eq("user_id", user.id)
+      .eq("owner", owner)
+      .eq("name", name);
   };
+
+  await supabase.from("brand_repos").upsert(
+    {
+      user_id: user.id,
+      provider: "github",
+      owner,
+      name,
+      is_public: true,
+      scan_status: "scanning",
+    },
+    { onConflict: "user_id,owner,name" },
+  );
 
   await supabase.from("user_onboarding").upsert(
     {

@@ -10,6 +10,7 @@ import { resolveGitHubAuth } from "@/lib/github/auth";
 import { buildBrandProfile } from "@/lib/extract";
 import type { FontFileInput } from "@/lib/extract";
 import type { AssetFile } from "@/lib/extract";
+import type { BrandProfile } from "@/lib/brand/types";
 import type { Session, SupabaseClient, User } from "@supabase/supabase-js";
 import { withUploadedAssetUrls } from "./brand-assets-storage";
 import { selectProjectRoot } from "./select-project-root";
@@ -44,6 +45,24 @@ function rankCssPath(p: string): number {
  * before the noise (random PNGs, screenshots, …) and survive the
  * `MAX_ASSET_FILES` slice.
  */
+function profileTokenCounts(profile: BrandProfile): Record<string, number> {
+  return {
+    colors: profile.colors.length,
+    typography: profile.typography.length,
+    fonts: profile.fonts.length,
+    spacing: profile.spacing.length,
+    shadows: profile.shadows.length,
+    radii: profile.radii.length,
+    borders: profile.borders.length,
+    animations: profile.animations.length,
+    breakpoints: profile.breakpoints.length,
+    opacity: profile.opacity.length,
+    zIndex: profile.zIndex.length,
+    gradients: profile.gradients.length,
+    assets: profile.assets.length,
+  };
+}
+
 function rankAssetPath(p: string): number {
   const lp = p.toLowerCase();
   if (/(^|\/)logo[^/]*\.(svg|png|webp)$/.test(lp)) return 0;
@@ -78,7 +97,7 @@ export async function runRepoScan(
     owner: string;
     name: string;
     projectName: string;
-    scanLog: (event: string, fields?: Record<string, string | undefined>) => void;
+    scanLog: (event: string, fields?: Record<string, unknown>) => void;
     markScanError: (message: string) => Promise<void>;
   }
 ): Promise<RunRepoScanResult> {
@@ -90,13 +109,13 @@ export async function runRepoScan(
     name,
     session?.provider_token ?? null,
   );
-  scanLog("auth_resolved", { source: auth.source });
+  scanLog("auth_resolved", { source: auth.source, phase: "fetch_meta", ok: true });
   const ghOpts: GitHubFetchOptions = { auth };
 
   const metaResult = await fetchRepoMetaDetailed(owner, name, ghOpts);
   if (!metaResult.meta) {
     const code = metaResult.error;
-    scanLog("meta_failed", { reason: code });
+    scanLog("meta_failed", { reason: code, phase: "fetch_meta", ok: false });
     if (code === "rate_limited") {
       await markScanError(
         "GitHub rate limit hit. Try again in a few minutes, or sign in with GitHub for a higher quota."
@@ -139,6 +158,8 @@ export async function runRepoScan(
   }
   const meta = metaResult.meta;
 
+  scanLog("phase", { phase: "fetch_tree", ok: true });
+
   const rawTree = await fetchTree(owner, name, meta.sha, ghOpts);
   const tree: TreeEntry[] = rawTree.map((t) => ({
     path: t.path,
@@ -158,7 +179,11 @@ export async function runRepoScan(
     await writeRepoUnsupported(supabase, user.id, meta, "no-react");
     return { kind: "unsupported", body: { unsupported: "no-react" } };
   }
-  scanLog("project_root", { root: root.projectRoot || "<repo-root>" });
+  scanLog("project_root", {
+    root: root.projectRoot || "<repo-root>",
+    phase: "fetch_tree",
+    ok: true,
+  });
 
   const projectRoot = root.projectRoot;
   const rootPrefix = projectRoot ? `${projectRoot}/` : "";
@@ -293,13 +318,11 @@ export async function runRepoScan(
     if (r.buffer) assetFiles.push({ path: r.path, buffer: r.buffer });
   }
 
-  scanLog("fetched", {
-    css: String(cssSources.length),
-    layouts: String(layoutFiles.length),
-    assets: String(assetFiles.length),
-    tailwind: tailwindConfigSource ? "1" : "0",
-    shadcn: shadcnJson ? "1" : "0",
-  });
+  scanLog("phase", { phase: "fetch_css", ok: true, cssFiles: cssSources.length });
+  scanLog("phase", { phase: "fetch_layouts", ok: true, layoutFiles: layoutFiles.length });
+  scanLog("phase", { phase: "fetch_assets", ok: true, assetFiles: assetFiles.length });
+
+  scanLog("phase", { phase: "build_profile", ok: true, stage: "start" });
 
   let profile: Awaited<ReturnType<typeof buildBrandProfile>>;
   let scanDurationMs = 0;
@@ -333,6 +356,13 @@ export async function runRepoScan(
         projectRoot,
       },
     };
+    scanLog("phase", {
+      phase: "build_profile",
+      ok: true,
+      durationMs: scanDurationMs,
+      counts: profileTokenCounts(merged),
+    });
+
     profile = await withUploadedAssetUrls(
       supabase,
       user.id,
@@ -341,12 +371,16 @@ export async function runRepoScan(
       merged,
       assetFiles
     );
+
+    scanLog("phase", { phase: "upload_assets", ok: true });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";
     const friendly = friendlyExtractionError(message);
     scanLog("extraction_failed", {
       reason: message.slice(0, 120),
       friendly,
+      phase: "build_profile",
+      ok: false,
     });
     await markScanError(friendly);
     return {
@@ -390,7 +424,11 @@ export async function runRepoScan(
   );
 
   if (upsertErr) {
-    scanLog("db_upsert_failed", { reason: upsertErr.message });
+    scanLog("db_upsert_failed", {
+      reason: upsertErr.message,
+      phase: "save",
+      ok: false,
+    });
     await markScanError(upsertErr.message);
     return {
       kind: "error",
@@ -403,7 +441,8 @@ export async function runRepoScan(
     { user_id: user.id, last_scan_error: null },
     { onConflict: "user_id" }
   );
-  scanLog("completed", { owner, name });
+  scanLog("phase", { phase: "save", ok: true });
+  scanLog("completed", { owner, name, phase: "done", ok: true });
 
   return {
     kind: "completed",

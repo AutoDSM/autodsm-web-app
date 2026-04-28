@@ -1,4 +1,4 @@
-import { createRouteHandlerClient } from "@/lib/supabase/route-handler-client";
+import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler-client";
 import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
@@ -14,15 +14,20 @@ function isEmailOtpType(t: string): t is EmailOtpType {
   return EMAIL_OTP_TYPES.has(t);
 }
 
+type ApplyCookies = (response: NextResponse) => NextResponse;
+
 async function finishAuthSession(
-  supabase: Awaited<ReturnType<typeof createRouteHandlerClient>>,
+  supabase: ReturnType<typeof createSupabaseRouteHandlerClient>["supabase"],
   origin: string,
+  applyCookies: ApplyCookies,
 ) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return NextResponse.redirect(`${origin}/login`);
+  if (!user) {
+    return applyCookies(NextResponse.redirect(`${origin}/login`));
+  }
 
   await supabase
     .from("app_users")
@@ -40,7 +45,7 @@ async function finishAuthSession(
       { onConflict: "id" },
     );
 
-  return NextResponse.redirect(`${origin}/auth/bridge`);
+  return applyCookies(NextResponse.redirect(`${origin}/auth/bridge`));
 }
 
 /**
@@ -61,7 +66,17 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const supabase = await createRouteHandlerClient();
+  let supabase;
+  let applyCookies: ApplyCookies;
+  try {
+    const ctx = createSupabaseRouteHandlerClient(request);
+    supabase = ctx.supabase;
+    applyCookies = ctx.applyCookies;
+  } catch {
+    return NextResponse.redirect(
+      `${origin}/login?error=${encodeURIComponent("Supabase is not configured")}`,
+    );
+  }
 
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
@@ -70,7 +85,7 @@ export async function GET(request: NextRequest) {
         `${origin}/login?error=${encodeURIComponent(error.message)}`,
       );
     }
-    return finishAuthSession(supabase, origin);
+    return finishAuthSession(supabase, origin, applyCookies);
   }
 
   if (tokenHash && otpType && isEmailOtpType(otpType)) {
@@ -83,7 +98,7 @@ export async function GET(request: NextRequest) {
         `${origin}/login?error=${encodeURIComponent(error.message)}`,
       );
     }
-    return finishAuthSession(supabase, origin);
+    return finishAuthSession(supabase, origin, applyCookies);
   }
 
   return NextResponse.redirect(`${origin}/login`);
