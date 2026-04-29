@@ -2,77 +2,15 @@ import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import type { BrandColor, BrandProfile, BrandTypography } from "@/lib/brand/types";
-import type { ColorScale } from "@/lib/brand/color-scale";
+import type { BrandColor, BrandProfile } from "@/lib/brand/types";
 import { buildSuggestions } from "@/lib/brand/token-suggestions";
-import { contrastRatio, toHsl, toOklchString, toRgbString } from "@/lib/extract/color-utils";
+import { mergeColorScale, typographyRowsFromGuide } from "@/lib/brand/finalize-profile";
 
 export const runtime = "nodejs";
 
 const bodySchema = z.object({
   suggestionIds: z.array(z.string()).min(1),
 });
-
-const SCALE_STEPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900] as const;
-
-function mergeColorScale(
-  profile: BrandProfile,
-  scale: ColorScale,
-  prefix: "primary" | "secondary",
-): BrandColor[] {
-  const existing = new Set(profile.colors.map((c) => c.cssVariable));
-  const added: BrandColor[] = [];
-  for (const step of SCALE_STEPS) {
-    const cssVariable = `--brand-${prefix}-${step}`;
-    if (existing.has(cssVariable)) continue;
-    const hex = scale[step];
-    const cw = contrastRatio(hex, "#ffffff");
-    const cb = contrastRatio(hex, "#000000");
-    added.push({
-      name: `brand-${prefix}-${step}`,
-      cssVariable,
-      value: hex,
-      hsl: toHsl(hex),
-      rgb: toRgbString(hex),
-      oklch: toOklchString(hex),
-      group: "brand",
-      source: "autodsm-generated",
-      fillOrigin: "autodsm-generated",
-      contrastOnWhite: cw,
-      contrastOnBlack: cb,
-      wcagAANormal: cw >= 4.5 || cb >= 4.5,
-      wcagAALarge: cw >= 3 || cb >= 3,
-      wcagAAA: cw >= 7 || cb >= 7,
-    });
-  }
-  return added;
-}
-
-function typographyRowsFromGuide(
-  guide: NonNullable<BrandProfile["meta"]["typographyGuide"]>,
-): BrandTypography[] {
-  return guide.map((row) => ({
-    name: `guide-${row.role}`,
-    fontFamily: row.fontFamily,
-    fontSize: `${row.fontSizePx}px`,
-    fontSizePx: row.fontSizePx,
-    fontWeight: String(row.fontWeight),
-    fontWeightNumeric: row.fontWeight,
-    lineHeight: String(
-      Math.round((row.lineHeightPx / Math.max(row.fontSizePx, 1)) * 1000) / 1000,
-    ),
-    lineHeightPx: row.lineHeightPx,
-    letterSpacing: row.letterSpacing,
-    source: "autodsm-guide",
-    category: ["h1", "h2", "h3", "h4", "h5", "h6"].includes(row.role)
-      ? "heading"
-      : row.role === "caption"
-        ? "utility"
-        : "body",
-    tailwindClass: row.tailwindClass,
-    guideOrigin: "autodsm-guide",
-  }));
-}
 
 export async function POST(req: NextRequest) {
   let json: unknown;
