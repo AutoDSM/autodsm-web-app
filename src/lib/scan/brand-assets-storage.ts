@@ -106,13 +106,21 @@ export async function withUploadedAssetUrls(
     }
 
     const key = `${userId}/${owner}/${repo}/${safePathSegment(asset.path)}`;
-    const { error: upErr } = await supabase.storage
-      .from(bucket)
-      .upload(key, bodyBuffer, {
-        upsert: true,
-        contentType: contentTypeFor(asset),
-        cacheControl: "31536000",
-      });
+    let upErr: { message: string } | null = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const { error } = await supabase.storage
+        .from(bucket)
+        .upload(key, bodyBuffer, {
+          upsert: true,
+          contentType: contentTypeFor(asset),
+          cacheControl: "31536000",
+        });
+      upErr = error ?? null;
+      if (!upErr) break;
+      if (attempt === 0) {
+        await new Promise((r) => setTimeout(r, 300 + Math.random() * 300));
+      }
+    }
 
     if (upErr) {
       failedUploads += 1;

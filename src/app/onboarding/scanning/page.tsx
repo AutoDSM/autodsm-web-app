@@ -24,6 +24,9 @@ const PREVIEW_STEPS = [
   "Done. Redirecting…",
 ];
 
+const STALENESS_MS = 90_000;
+const MAX_WAIT_MS = 5 * 60_000;
+
 type ScanStatusPayload = {
   repoId?: string | null;
   phase?: string | null;
@@ -54,6 +57,8 @@ function ScanningPageInner() {
   const [statusPollError, setStatusPollError] = React.useState<string | null>(null);
   /** Server-side last_scan_error from status poll while scan may still be running or after failure. */
   const [lastScanErrorHint, setLastScanErrorHint] = React.useState<string | null>(null);
+  /** True when the scan hasn't advanced phase in STALENESS_MS or wall-clock has hit MAX_WAIT_MS. */
+  const [isStalled, setIsStalled] = React.useState(false);
 
   React.useEffect(() => {
     if (!repo) {
@@ -81,6 +86,9 @@ function ScanningPageInner() {
     }
 
     const controller = new AbortController();
+    const pollStartedAt = Date.now();
+    let lastPhaseChangeAt = Date.now();
+    let lastPhaseSeen: string | null = null;
 
     void fetch("/api/onboarding", {
       method: "PATCH",
@@ -127,7 +135,14 @@ function ScanningPageInner() {
           setStatusPollError(null);
         }
 
-        if (body.phase != null) setScanPhase(body.phase);
+        if (body.phase != null) {
+          setScanPhase(body.phase);
+          if (body.phase !== lastPhaseSeen) {
+            lastPhaseSeen = body.phase;
+            lastPhaseChangeAt = Date.now();
+            setIsStalled(false);
+          }
+        }
         if (body.scanStatus != null) setScanStatus(body.scanStatus);
         if (body.counts) setTokenCounts(body.counts);
         if (body.repoId) setRepoId(body.repoId);
@@ -143,6 +158,17 @@ function ScanningPageInner() {
 
     void pollStatus();
     const poll = window.setInterval(() => void pollStatus(), 1500);
+    const stallCheck = window.setInterval(() => {
+      const since = Date.now() - lastPhaseChangeAt;
+      const total = Date.now() - pollStartedAt;
+      if (since > STALENESS_MS || total > MAX_WAIT_MS) {
+        setIsStalled(true);
+        if (total > MAX_WAIT_MS) {
+          window.clearInterval(poll);
+          window.clearInterval(stallCheck);
+        }
+      }
+    }, 5_000);
 
     (async () => {
       try {
@@ -203,6 +229,7 @@ function ScanningPageInner() {
     return () => {
       controller.abort();
       window.clearInterval(poll);
+      window.clearInterval(stallCheck);
     };
   }, [repo, router, isPreview, projectName]);
 
@@ -262,6 +289,12 @@ function ScanningPageInner() {
     lastScanErrorHint &&
     (scanStatus === "failed" || scanStatus === "scanning") &&
     !isRepoScanStage;
+  const showStalled =
+    !isPreview &&
+    isStalled &&
+    scanStatus !== "completed" &&
+    scanStatus !== "failed" &&
+    !error;
 
   return (
     <div className="grid min-h-0 min-w-0 flex-1 place-items-center bg-[var(--bg-primary)] px-4 py-8 sm:px-6">
@@ -290,6 +323,22 @@ function ScanningPageInner() {
             <AlertTitle>Last scan message</AlertTitle>
             <AlertDescription className="break-words font-[var(--font-geist-mono)] text-[12px] leading-relaxed text-[var(--text-secondary)]">
               {lastScanErrorHint}
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {showStalled ? (
+          <Alert className="mt-5 border-[color-mix(in_srgb,var(--warning)_40%,transparent)] bg-[color-mix(in_srgb,var(--warning)_10%,transparent)] text-[var(--text-primary)]">
+            <AlertTriangle className="size-4 shrink-0 text-[var(--warning)]" aria-hidden />
+            <AlertTitle>Scan looks stuck</AlertTitle>
+            <AlertDescription className="break-words text-[13px] leading-relaxed text-[var(--text-secondary)]">
+              We haven&apos;t seen progress in a while. The repo may be very large or
+              GitHub may be slow. You can keep waiting or restart from the connect step.
+              <span className="mt-3 flex flex-wrap gap-2">
+                <Button asChild variant="outline" className="h-9 rounded-lg">
+                  <Link href="/onboarding/connect">Restart scan</Link>
+                </Button>
+              </span>
             </AlertDescription>
           </Alert>
         ) : null}

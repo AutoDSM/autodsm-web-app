@@ -76,6 +76,32 @@ function encPath(p: string): string {
 }
 
 /**
+ * Single retry on transient GitHub failures (5xx, 429). Network throws also
+ * retry once. Hot loops on a flaky upstream are guarded by the per-phase
+ * `withTimeout` deadlines in run-repo-scan; this just smooths over a single
+ * blip without failing the whole scan.
+ */
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  retries = 1,
+): Promise<Response> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, init);
+      const transient =
+        res.status === 429 || (res.status >= 500 && res.status < 600);
+      if (!transient || attempt === retries) return res;
+    } catch (err) {
+      if (attempt === retries) throw err;
+    }
+    await new Promise((r) => setTimeout(r, 400 + Math.random() * 400));
+  }
+  // Unreachable: loop either returns or throws.
+  return fetch(url, init);
+}
+
+/**
  * Standardized error code for upstream GitHub failures so callers can show
  * actionable UX (e.g. reconnect, wait for rate limit reset).
  */
@@ -108,7 +134,7 @@ async function fetchFileContentsApi(
   opts?: GitHubFetchOptions,
 ): Promise<string | null> {
   const url = `https://api.github.com/repos/${owner}/${name}/contents/${encPath(path)}?ref=${encodeURIComponent(ref)}`;
-  const res = await fetch(url, { headers: apiHeaders(opts), next: { revalidate: 0 } });
+  const res = await fetchWithRetry(url, { headers: apiHeaders(opts), next: { revalidate: 0 } });
   if (!res.ok) return null;
   const j = (await res.json()) as { content?: string; encoding?: string; size?: number };
   if (j.encoding !== "base64" || !j.content) return null;
@@ -132,7 +158,7 @@ export async function fetchRepoMetaDetailed(
   name: string,
   opts?: GitHubFetchOptions,
 ): Promise<FetchRepoMetaResult> {
-  const res = await fetch(`https://api.github.com/repos/${owner}/${name}`, {
+  const res = await fetchWithRetry(`https://api.github.com/repos/${owner}/${name}`, {
     headers: apiHeaders(opts),
     next: { revalidate: 60 },
   });
@@ -145,7 +171,7 @@ export async function fetchRepoMetaDetailed(
     private: boolean;
   };
 
-  const branchRes = await fetch(
+  const branchRes = await fetchWithRetry(
     `https://api.github.com/repos/${owner}/${name}/branches/${encodeURIComponent(j.default_branch)}`,
     { headers: apiHeaders(opts) },
   );
@@ -180,7 +206,7 @@ export async function fetchTree(
   sha: string,
   opts?: GitHubFetchOptions,
 ): Promise<{ path: string; sha: string; size: number; type: string }[]> {
-  const res = await fetch(
+  const res = await fetchWithRetry(
     `https://api.github.com/repos/${owner}/${name}/git/trees/${sha}?recursive=1`,
     { headers: apiHeaders(opts) },
   );
@@ -207,7 +233,7 @@ export async function fetchFileText(
 ): Promise<string | null> {
   const { token } = pickToken(opts);
   const url = `https://raw.githubusercontent.com/${owner}/${name}/${ref}/${encPath(path)}`;
-  const res = await fetch(url, { headers: rawHeaders(opts) });
+  const res = await fetchWithRetry(url, { headers: rawHeaders(opts) });
   if (res.ok) {
     const buf = await res.arrayBuffer();
     if (buf.byteLength > MAX_TEXT_SIZE) return null;
@@ -233,7 +259,7 @@ export async function fetchFileBuffer(
 ): Promise<Buffer | null> {
   const { token } = pickToken(opts);
   const url = `https://raw.githubusercontent.com/${owner}/${name}/${ref}/${encPath(path)}`;
-  const res = await fetch(url, { headers: rawHeaders(opts) });
+  const res = await fetchWithRetry(url, { headers: rawHeaders(opts) });
   if (res.ok) {
     const buf = await res.arrayBuffer();
     if (buf.byteLength > MAX_BINARY_SIZE) return null;
