@@ -11,6 +11,7 @@ import { buildBrandProfile } from "@/lib/extract";
 import type { FontFileInput } from "@/lib/extract";
 import type { AssetFile } from "@/lib/extract";
 import type { BrandProfile } from "@/lib/brand/types";
+import { finalizeBrandProfile } from "@/lib/brand/finalize-profile";
 import type { Session, SupabaseClient, User } from "@supabase/supabase-js";
 import { withUploadedAssetUrls } from "./brand-assets-storage";
 import { selectProjectRoot } from "./select-project-root";
@@ -363,7 +364,7 @@ export async function runRepoScan(
       counts: profileTokenCounts(merged),
     });
 
-    profile = await withUploadedAssetUrls(
+    const withAssets = await withUploadedAssetUrls(
       supabase,
       user.id,
       meta.owner,
@@ -373,6 +374,16 @@ export async function runRepoScan(
     );
 
     scanLog("phase", { phase: "upload_assets", ok: true });
+
+    profile = finalizeBrandProfile(withAssets);
+
+    scanLog("phase", {
+      phase: "finalize_profile",
+      ok: true,
+      counts: profileTokenCounts(profile),
+      acceptedSuggestions:
+        profile.meta.tokenChoices?.acceptedSuggestions ?? [],
+    });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";
     const friendly = friendlyExtractionError(message);
