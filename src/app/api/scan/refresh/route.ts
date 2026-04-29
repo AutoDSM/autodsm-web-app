@@ -2,6 +2,10 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { runRepoScan } from "@/lib/scan/run-repo-scan";
+import {
+  buildScanLogger,
+  isScanInFlight,
+} from "@/lib/scan/scan-route-helpers";
 import type { BrandProfile } from "@/lib/brand/types";
 
 export const runtime = "nodejs";
@@ -62,20 +66,25 @@ export async function POST() {
   const projectName =
     profile?.meta?.projectName?.trim() || repoRow.name;
 
-  const scanLog = (event: string, fields?: Record<string, unknown>) => {
-    if (process.env.NODE_ENV === "development") {
-      console.info("[scan/refresh]", event, fields ?? "");
-    } else {
-      console.info(`[scan/refresh] ${JSON.stringify({ event, ...fields })}`);
-    }
-    void supabase
-      .from("brand_scan_logs")
-      .insert({
-        event,
-        payload: { ...fields, scope: "refresh", userId: user.id },
-      })
-      .then(() => undefined, () => undefined);
-  };
+  const scanLog = buildScanLogger(supabase, user.id, "refresh");
+
+  const inFlight = await isScanInFlight(
+    supabase,
+    user.id,
+    repoRow.owner,
+    repoRow.name,
+  );
+  if (inFlight.inFlight) {
+    return NextResponse.json(
+      {
+        error: "A scan for this repository is already in progress.",
+        errorCode: "scan_in_flight",
+        scanStatus: inFlight.status,
+        startedAt: inFlight.startedAt,
+      },
+      { status: 409 },
+    );
+  }
 
   const markScanError = async (message: string) => {
     await supabase.from("user_onboarding").upsert(

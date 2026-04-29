@@ -3,6 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeRepoInput } from "@/lib/utils";
 import { runRepoScan } from "@/lib/scan/run-repo-scan";
+import {
+  buildScanLogger,
+  isScanInFlight,
+} from "@/lib/scan/scan-route-helpers";
 
 export const runtime = "nodejs";
 // Inline scan can take a while for large monorepos; Fluid Compute supports
@@ -54,20 +58,20 @@ export async function POST(req: NextRequest) {
     return { message: String(e).slice(0, 500) };
   };
 
-  const scanLog = (event: string, fields?: Record<string, unknown>) => {
-    if (process.env.NODE_ENV === "development") {
-      console.info("[scan]", event, fields ?? "");
-    } else {
-      console.info(`[scan] ${JSON.stringify({ event, ...fields })}`);
-    }
-    void supabase
-      .from("brand_scan_logs")
-      .insert({
-        event,
-        payload: { ...fields, scope: "scan", userId: user.id },
-      })
-      .then(() => undefined, () => undefined);
-  };
+  const scanLog = buildScanLogger(supabase, user.id, "scan");
+
+  const inFlight = await isScanInFlight(supabase, user.id, owner, name);
+  if (inFlight.inFlight) {
+    return NextResponse.json(
+      {
+        error: "A scan for this repository is already in progress.",
+        errorCode: "scan_in_flight",
+        scanStatus: inFlight.status,
+        startedAt: inFlight.startedAt,
+      },
+      { status: 409 },
+    );
+  }
 
   const markScanError = async (message: string) => {
     await supabase.from("user_onboarding").upsert(

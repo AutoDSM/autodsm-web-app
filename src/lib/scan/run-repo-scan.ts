@@ -15,10 +15,20 @@ import { finalizeBrandProfile } from "@/lib/brand/finalize-profile";
 import type { Session, SupabaseClient, User } from "@supabase/supabase-js";
 import { withUploadedAssetUrls } from "./brand-assets-storage";
 import { selectProjectRoot } from "./select-project-root";
+import { ScanPhaseTimeoutError, withTimeout } from "./with-timeout";
+import { validateBrandProfile } from "./validate-profile";
 
 const MAX_CSS_FILES = 12;
 const MAX_LAYOUT_FILES = 6;
 const MAX_ASSET_FILES = 80;
+
+const PHASE_TIMEOUT_MS = {
+  fetch_meta: 30_000,
+  fetch_tree: 30_000,
+  fetch_files: 90_000,
+  build_profile: 90_000,
+  upload_assets: 60_000,
+} as const;
 
 interface TreeEntry {
   path: string;
@@ -103,7 +113,57 @@ export async function runRepoScan(
   }
 ): Promise<RunRepoScanResult> {
   const t0 = Date.now();
+  let terminalStatusWritten = false;
+  const markTerminal = () => {
+    terminalStatusWritten = true;
+  };
 
+  try {
+    return await runRepoScanInner();
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Unknown scan error";
+    const phase =
+      e instanceof ScanPhaseTimeoutError ? e.phase : "unknown";
+    scanLog("uncaught_scan_error", { reason: message.slice(0, 240), phase, ok: false });
+    const friendly =
+      e instanceof ScanPhaseTimeoutError
+        ? `Scan stalled at "${e.phase}" — try again, the upstream looked unhealthy.`
+        : friendlyExtractionError(message);
+    try {
+      await markScanError(friendly);
+      markTerminal();
+    } catch (markErr) {
+      console.error(
+        "[scan] markScanError failed inside catch handler:",
+        markErr instanceof Error ? markErr.message : markErr,
+      );
+    }
+    return {
+      kind: "error",
+      status: 500,
+      body: { error: friendly, errorCode: "scan_failed" },
+    };
+  } finally {
+    if (!terminalStatusWritten) {
+      // Last-resort guard: never leave brand_repos.scan_status stuck on "scanning".
+      try {
+        await supabase
+          .from("brand_repos")
+          .update({ scan_status: "failed" })
+          .eq("user_id", user.id)
+          .eq("owner", owner)
+          .eq("name", name)
+          .eq("scan_status", "scanning");
+      } catch (cleanupErr) {
+        console.error(
+          "[scan] terminal-status cleanup failed:",
+          cleanupErr instanceof Error ? cleanupErr.message : cleanupErr,
+        );
+      }
+    }
+  }
+
+  async function runRepoScanInner(): Promise<RunRepoScanResult> {
   const auth = await resolveGitHubAuth(
     supabase,
     owner,
@@ -113,7 +173,11 @@ export async function runRepoScan(
   scanLog("auth_resolved", { source: auth.source, phase: "fetch_meta", ok: true });
   const ghOpts: GitHubFetchOptions = { auth };
 
-  const metaResult = await fetchRepoMetaDetailed(owner, name, ghOpts);
+  const metaResult = await withTimeout(
+    fetchRepoMetaDetailed(owner, name, ghOpts),
+    PHASE_TIMEOUT_MS.fetch_meta,
+    "fetch_meta",
+  );
   if (!metaResult.meta) {
     const code = metaResult.error;
     scanLog("meta_failed", { reason: code, phase: "fetch_meta", ok: false });
@@ -121,6 +185,7 @@ export async function runRepoScan(
       await markScanError(
         "GitHub rate limit hit. Try again in a few minutes, or sign in with GitHub for a higher quota."
       );
+      markTerminal();
       return {
         kind: "error",
         status: 429,
@@ -134,6 +199,7 @@ export async function runRepoScan(
       await markScanError(
         "Couldn't access this repository. Reconnect with GitHub or install the autoDSM app on the org."
       );
+      markTerminal();
       return {
         kind: "error",
         status: 401,
@@ -147,6 +213,7 @@ export async function runRepoScan(
     await markScanError(
       "Repository not found or not accessible. For private repos, sign in with GitHub (OAuth) or ensure the repo exists."
     );
+    markTerminal();
     return {
       kind: "error",
       status: 404,
@@ -161,13 +228,18 @@ export async function runRepoScan(
 
   scanLog("phase", { phase: "fetch_tree", ok: true });
 
-  const rawTree = await fetchTree(owner, name, meta.sha, ghOpts);
+  const rawTree = await withTimeout(
+    fetchTree(owner, name, meta.sha, ghOpts),
+    PHASE_TIMEOUT_MS.fetch_tree,
+    "fetch_tree",
+  );
   const tree: TreeEntry[] = rawTree.map((t) => ({
     path: t.path,
     size: t.size,
   }));
   if (tree.length === 0) {
     await markScanError("Repository tree is empty or inaccessible.");
+    markTerminal();
     return {
       kind: "error",
       status: 500,
@@ -178,6 +250,7 @@ export async function runRepoScan(
   const root = await selectProjectRoot(owner, name, meta.sha, tree, ghOpts);
   if (!root) {
     await writeRepoUnsupported(supabase, user.id, meta, "no-react");
+    markTerminal();
     return { kind: "unsupported", body: { unsupported: "no-react" } };
   }
   scanLog("project_root", {
@@ -201,10 +274,12 @@ export async function runRepoScan(
 
   if (!hasReact) {
     await writeRepoUnsupported(supabase, user.id, meta, "no-react");
+    markTerminal();
     return { kind: "unsupported", body: { unsupported: "no-react" } };
   }
   if (!hasTs) {
     await writeRepoUnsupported(supabase, user.id, meta, "no-typescript");
+    markTerminal();
     return { kind: "unsupported", body: { unsupported: "no-typescript" } };
   }
 
@@ -282,17 +357,21 @@ export async function runRepoScan(
   textPaths.push(...cssEntries.map((e) => e.path));
   textPaths.push(...layoutCandidates.map((e) => e.path));
 
-  const [textResults, bufResults] = await Promise.all([
-    fetchManyText(owner, name, textPaths, meta.sha, ghOpts, 6),
-    fetchManyBuffer(
-      owner,
-      name,
-      assetCandidates.map((e) => e.path),
-      meta.sha,
-      ghOpts,
-      6,
-    ),
-  ]);
+  const [textResults, bufResults] = await withTimeout(
+    Promise.all([
+      fetchManyText(owner, name, textPaths, meta.sha, ghOpts, 6),
+      fetchManyBuffer(
+        owner,
+        name,
+        assetCandidates.map((e) => e.path),
+        meta.sha,
+        ghOpts,
+        6,
+      ),
+    ]),
+    PHASE_TIMEOUT_MS.fetch_files,
+    "fetch_files",
+  );
 
   const textByPath = new Map<string, string | null>();
   for (const r of textResults) textByPath.set(r.path, r.content);
@@ -328,25 +407,29 @@ export async function runRepoScan(
   let profile: Awaited<ReturnType<typeof buildBrandProfile>>;
   let scanDurationMs = 0;
   try {
-    const built = await buildBrandProfile({
-      repo: { owner, name, url: meta.url },
-      tailwindConfigSource: tailwindConfigSource ?? undefined,
-      tailwindConfigPath: tailwindEntry?.path,
-      cssSources,
-      shadcnJson: shadcnJson ?? undefined,
-      shadcnConfigPath: shadcnEntry?.path,
-      assetFiles,
-      layoutFiles,
-      sha: meta.sha,
-      branch: meta.defaultBranch,
-      filesScanned:
-        cssSources.length +
-        layoutFiles.length +
-        assetFiles.length +
-        (tailwindConfigSource ? 1 : 0) +
-        (shadcnJson ? 1 : 0) +
-        1,
-    });
+    const built = await withTimeout(
+      buildBrandProfile({
+        repo: { owner, name, url: meta.url },
+        tailwindConfigSource: tailwindConfigSource ?? undefined,
+        tailwindConfigPath: tailwindEntry?.path,
+        cssSources,
+        shadcnJson: shadcnJson ?? undefined,
+        shadcnConfigPath: shadcnEntry?.path,
+        assetFiles,
+        layoutFiles,
+        sha: meta.sha,
+        branch: meta.defaultBranch,
+        filesScanned:
+          cssSources.length +
+          layoutFiles.length +
+          assetFiles.length +
+          (tailwindConfigSource ? 1 : 0) +
+          (shadcnJson ? 1 : 0) +
+          1,
+      }),
+      PHASE_TIMEOUT_MS.build_profile,
+      "build_profile",
+    );
     scanDurationMs = Date.now() - t0;
     const merged: Awaited<ReturnType<typeof buildBrandProfile>> = {
       ...built,
@@ -364,13 +447,17 @@ export async function runRepoScan(
       counts: profileTokenCounts(merged),
     });
 
-    const withAssets = await withUploadedAssetUrls(
-      supabase,
-      user.id,
-      meta.owner,
-      meta.name,
-      merged,
-      assetFiles
+    const withAssets = await withTimeout(
+      withUploadedAssetUrls(
+        supabase,
+        user.id,
+        meta.owner,
+        meta.name,
+        merged,
+        assetFiles,
+      ),
+      PHASE_TIMEOUT_MS.upload_assets,
+      "upload_assets",
     );
 
     scanLog("phase", { phase: "upload_assets", ok: true });
@@ -386,18 +473,45 @@ export async function runRepoScan(
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";
-    const friendly = friendlyExtractionError(message);
+    const phase =
+      e instanceof ScanPhaseTimeoutError ? e.phase : "build_profile";
+    const friendly =
+      e instanceof ScanPhaseTimeoutError
+        ? `Scan stalled at "${e.phase}" — try again, the upstream looked unhealthy.`
+        : friendlyExtractionError(message);
     scanLog("extraction_failed", {
       reason: message.slice(0, 120),
       friendly,
-      phase: "build_profile",
+      phase,
       ok: false,
     });
     await markScanError(friendly);
+    markTerminal();
     return {
       kind: "error",
       status: 500,
       body: { error: friendly, errorCode: "extraction_failed" },
+    };
+  }
+
+  const validation = validateBrandProfile(profile);
+  if (!validation.ok) {
+    scanLog("validation_failed", {
+      reason: validation.reason,
+      phase: "validate",
+      ok: false,
+    });
+    await markScanError(
+      `We extracted tokens but they didn't pass validation (${validation.reason}). Please rescan.`,
+    );
+    markTerminal();
+    return {
+      kind: "error",
+      status: 500,
+      body: {
+        error: `Profile validation failed: ${validation.reason}`,
+        errorCode: "profile_invalid",
+      },
     };
   }
 
@@ -441,6 +555,7 @@ export async function runRepoScan(
       ok: false,
     });
     await markScanError(upsertErr.message);
+    markTerminal();
     return {
       kind: "error",
       status: 500,
@@ -455,12 +570,14 @@ export async function runRepoScan(
   scanLog("phase", { phase: "save", ok: true });
   scanLog("completed", { owner, name, phase: "done", ok: true });
 
+  markTerminal();
   return {
     kind: "completed",
     owner: meta.owner,
     name: meta.name,
     durationMs: scanDurationMs,
   };
+  }
 }
 
 /**
