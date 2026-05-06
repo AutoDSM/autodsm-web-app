@@ -173,7 +173,9 @@ function CitationTrigger({
     "inline-flex h-5.5 max-w-full items-center rounded-full align-middle",
     "border border-[var(--border-subtle)] bg-[var(--bg-secondary)]",
     "text-[11px] leading-4 text-[var(--text-secondary)]",
-    "transition-colors hover:bg-[var(--bg-tertiary)]",
+    "transition-[background-color,border-color,color,box-shadow] duration-150 [transition-timing-function:var(--ease-standard)]",
+    "hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] hover:border-[var(--border-default)]",
+    "focus-visible:outline-none focus-visible:[box-shadow:0_0_0_1px_var(--accent),0_0_0_4px_var(--accent-glow-soft)]",
     hasText && showFavicon && "gap-1 py-0.5 pr-2 pl-1",
     hasText && !showFavicon && "px-2 py-0.5",
     !hasText && showFavicon && "p-1"

@@ -64,11 +64,12 @@ function ThreadScrollToBottom({
           [
             "absolute bottom-4 left-1/2 -translate-x-1/2",
             "flex h-8 w-8 items-center justify-center rounded-full",
-            "border border-[var(--border-subtle)] bg-[var(--bg-elevated)]",
+            "border border-[var(--border-default)] bg-[var(--bg-elevated)]",
             "text-[var(--text-secondary)] shadow-[var(--shadow-sm)]",
-            "transition-colors hover:bg-[var(--bg-secondary)]",
-            "dark:hover:bg-[var(--bg-tertiary)]",
-            "active:scale-[0.98]",
+            "transition-[background-color,border-color,color,box-shadow,transform] duration-150 [transition-timing-function:var(--ease-standard)]",
+            "hover:text-[var(--text-primary)] hover:border-[var(--accent)]",
+            "hover:[box-shadow:0_0_0_1px_var(--accent),0_0_24px_var(--accent-glow-soft)]",
+            "active:scale-[0.96]",
           ].join(" "),
         className
       )}

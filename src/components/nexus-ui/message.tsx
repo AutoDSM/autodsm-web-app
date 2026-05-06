@@ -19,11 +19,15 @@ function useMessageContext() {
 
 type MessageProps = React.HTMLAttributes<HTMLDivElement> & {
   from: MessageFrom
+  /** When true, an assistant message renders a 2px purple rail along its left
+   * edge — used to mark the actively streaming / latest agent turn. */
+  active?: boolean
 }
 
 function Message({
   className,
   from,
+  active,
   children,
   "aria-label": ariaLabelProp,
   "aria-labelledby": ariaLabelledBy,
@@ -47,6 +51,8 @@ function Message({
         className={cn(
           "flex min-w-0 w-full max-w-[90%] items-start gap-2",
           from === "user" ? "ms-auto" : "me-auto",
+          /* Assistant rail — only when explicitly active (latest / streaming) */
+          from === "assistant" && active && "autodsm-agent-rail pl-3",
           className
         )}
         {...props}
@@ -86,11 +92,15 @@ function MessageContent({ className, ...props }: MessageContentProps) {
     <div
       data-slot="message-content"
       className={cn(
-        /* User bubble: --bg-canvas = light F3F3F4 / dark 0f0f11 (see globals.css) */
+        /* User bubble: subtle raised tint with a hairline border so it lifts on canvas */
         "min-h-10 min-w-0 rounded-[20px] text-sm leading-6",
         from === "user"
-          ? "w-fit max-w-full bg-[var(--bg-canvas)] px-4 py-2 text-foreground"
-          : "w-full max-w-full bg-transparent px-2 text-muted-foreground",
+          ? [
+              "w-fit max-w-full px-4 py-2 text-[var(--text-primary)]",
+              "bg-[var(--bg-canvas)]",
+              "border border-[var(--border-subtle)]",
+            ].join(" ")
+          : "w-full max-w-full bg-transparent px-2 text-[var(--text-primary)]",
         className
       )}
       {...props}

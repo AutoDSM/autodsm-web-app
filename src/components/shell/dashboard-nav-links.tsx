@@ -77,13 +77,14 @@ function NavLink({
       href={href}
       onClick={() => onNavigate?.()}
       className={cn(
-        "flex h-8 min-h-8 items-center gap-2 rounded-md text-[12px] leading-4",
+        "relative flex h-8 min-h-8 items-center gap-2 rounded-md text-[12px] leading-4",
         "transition-colors duration-150 [transition-timing-function:var(--ease-standard)]",
         topLevel ? "w-[224px] px-3" : "w-[224px] pl-4 pr-1",
         active
           ? [
-              "bg-[var(--bg-elevated)] font-medium text-[var(--text-primary)]",
-              "border border-[var(--border-subtle)] shadow-[var(--shadow-sm)]",
+              "autodsm-nav-active-bar",
+              "bg-[var(--accent-subtle)] font-medium text-[var(--text-primary)]",
+              "border border-transparent",
             ].join(" ")
           : [
               "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
@@ -155,7 +156,7 @@ export function DashboardNavLinks({
                 type="button"
                 onClick={() => setOpenSections((s) => ({ ...s, [section.label]: !open }))}
                 className={[
-                  "flex w-[224px] items-center justify-between gap-2 px-3 pb-2 text-left text-caption font-semibold tracking-widest",
+                  "font-heading flex w-[224px] items-center justify-between gap-2 px-3 pb-2 text-left text-caption font-semibold tracking-widest",
                   "text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-secondary)]",
                   "hover:bg-[var(--bg-secondary)]/40 active:bg-[var(--bg-secondary)]/55",
                   "dark:hover:bg-[var(--bg-tertiary)]/35 dark:active:bg-[var(--bg-elevated)]/55",
@@ -203,7 +204,7 @@ export function DashboardNavLinks({
         />
         {userLabel ? (
           <div className="mt-2 flex items-center gap-2 rounded-lg border-0 [background:unset] px-2.5 py-2 text-[12px] leading-4 text-[var(--text-secondary)] shadow-none">
-            <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-[12px] font-medium text-white">
+            <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-[12px] font-medium text-[var(--accent-fg)] shadow-[0_0_16px_var(--accent-glow-soft)]">
               {userLabel.slice(0, 1).toUpperCase()}
             </div>
             <span className="min-w-0 flex-1 truncate">{userLabel}</span>

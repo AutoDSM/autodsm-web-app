@@ -60,9 +60,10 @@ function PromptInput({
         role="group"
         aria-label="Chat input"
         className={cn(
-          "relative flex h-auto w-full cursor-text flex-col overflow-hidden rounded-3xl",
-          "border border-[var(--border-subtle)] bg-transparent",
-          "shadow-none",
+          "autodsm-composer relative flex h-auto w-full cursor-text flex-col overflow-hidden rounded-3xl",
+          "border border-[var(--border-default)] bg-[var(--bg-elevated)]",
+          "shadow-[var(--shadow-sm)]",
+          "transition-[box-shadow,border-color] duration-200 [transition-timing-function:var(--ease-standard)]",
           className
         )}
         onClick={handleClick}

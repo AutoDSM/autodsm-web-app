@@ -26,6 +26,28 @@ import {
   type CitationSourceInput,
 } from "@/components/nexus-ui/citation";
 
+/* Send button — purple gradient + glow when actionable, raised+muted when idle.
+ * Mirrors the spec primary CTA (§5.1) and the circular composer send (§5.2). */
+function sendButtonClassName(input: string, isLoading: boolean): string {
+  const canSend = input.trim().length > 0 && !isLoading;
+  return cn(
+    "rounded-full border-0 transition-all duration-150 [transition-timing-function:var(--ease-standard)]",
+    "focus-visible:[box-shadow:0_0_0_2px_var(--bg-elevated),0_0_0_4px_var(--accent)]!",
+    canSend
+      ? [
+          "bg-[var(--accent)] text-[var(--accent-fg)]",
+          "shadow-[0_0_0_1px_var(--accent),inset_0_1px_0_rgba(255,255,255,0.16),0_0_24px_var(--accent-glow)]",
+          "hover:bg-[var(--accent-hover)]",
+          "hover:shadow-[0_0_0_1px_var(--accent-hover),inset_0_1px_0_rgba(255,255,255,0.2),0_0_32px_var(--accent-glow)]",
+          "active:translate-y-px",
+        ].join(" ")
+      : [
+          "bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] shadow-none",
+          "hover:bg-[var(--bg-tertiary)]",
+        ].join(" "),
+  );
+}
+
 export default function AgentPage() {
   const [input, setInput] = React.useState("");
   const [messages, setMessages] = React.useState<
@@ -84,16 +106,7 @@ export default function AgentPage() {
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col">
       {messages.length === 0 ? (
         <div className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center px-4 py-8 sm:px-8 sm:py-10">
-          <h1
-            className="w-full min-w-0 max-w-[520px] px-1 text-center text-[var(--text-primary)]"
-            style={{
-              fontFamily: "Manrope",
-              fontWeight: 700,
-              fontSize: "20px",
-              letterSpacing: "-0.025em",
-              lineHeight: 1.15,
-            }}
-          >
+          <h1 className="font-heading w-full min-w-0 max-w-[520px] px-1 text-center text-[20px] font-bold leading-[1.15] tracking-[-0.025em] text-[var(--text-primary)]">
             Let&apos;s design autoDSM
           </h1>
 
@@ -110,8 +123,7 @@ export default function AgentPage() {
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask any questions about your design system or brand"
                 disabled={isLoading}
-                style={{ fontFamily: "var(--font-geist-sans)" }}
-                className="min-h-[92px]"
+                className="min-h-[92px] font-sans"
               />
               <PromptInputActions>
                 <PromptInputActionGroup>
@@ -140,13 +152,7 @@ export default function AgentPage() {
                     <Button
                       type="submit"
                       size="icon-sm"
-                      className={cn(
-                        "rounded-full border-0 disabled:opacity-60",
-                        "bg-zinc-200 text-zinc-900 shadow-none",
-                        "hover:bg-zinc-300",
-                        "focus-visible:ring-2 focus-visible:ring-zinc-400/50",
-                        "focus-visible:[box-shadow:none!important] dark:focus-visible:ring-zinc-500/40",
-                      )}
+                      className={sendButtonClassName(input, isLoading)}
                       disabled={isLoading || !input.trim()}
                       aria-label="Send"
                     >
@@ -168,10 +174,15 @@ export default function AgentPage() {
             <div className="mx-auto h-full min-w-0 max-w-2xl">
               <Thread className="h-full">
                 <ThreadContent className="items-stretch">
-                  {messages.map((msg) => (
+                  {messages.map((msg, idx) => {
+                    const isLastAssistant =
+                      msg.role === "assistant" &&
+                      idx === messages.length - 1;
+                    return (
                     <Message
                       key={msg.id}
                       from={msg.role === "user" ? "user" : "assistant"}
+                      active={isLastAssistant}
                     >
                       <MessageStack>
                         <MessageContent>
@@ -190,7 +201,8 @@ export default function AgentPage() {
                         ) : null}
                       </MessageStack>
                     </Message>
-                  ))}
+                    );
+                  })}
                 </ThreadContent>
                 <ThreadScrollToBottom />
               </Thread>
@@ -211,7 +223,7 @@ export default function AgentPage() {
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Ask any questions about your design system or brand"
                   disabled={isLoading}
-                  style={{ fontFamily: "var(--font-geist-sans)" }}
+                  className="font-sans"
                 />
                 <PromptInputActions>
                   <PromptInputActionGroup />
@@ -220,13 +232,7 @@ export default function AgentPage() {
                       <Button
                         type="submit"
                         size="icon-sm"
-                        className={cn(
-                          "rounded-full border-0 disabled:opacity-60",
-                          "bg-zinc-200 text-zinc-900 shadow-none",
-                          "hover:bg-zinc-300",
-                          "focus-visible:ring-2 focus-visible:ring-zinc-400/50",
-                          "focus-visible:[box-shadow:none!important] dark:focus-visible:ring-zinc-500/40",
-                        )}
+                        className={sendButtonClassName(input, isLoading)}
                         disabled={isLoading || !input.trim()}
                         aria-label="Send"
                       >
