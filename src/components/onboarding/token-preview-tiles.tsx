@@ -95,34 +95,149 @@ export function ColorsPreview({ profile, href, count }: TileProps) {
   );
 }
 
-export function TypographyPreview({ profile, href, count }: TileProps) {
+function stripStack(raw: string | undefined): string {
+  if (!raw) return "";
+  return (
+    raw
+      .split(",")[0]
+      ?.trim()
+      .replace(/^var\([^)]+\)/, "")
+      .replace(/['"]/g, "")
+      .trim() ?? ""
+  );
+}
+
+type TypeLadderRow = {
+  label: string;
+  sample: string;
+  fontFamily: string;
+  fontWeight: number;
+  fontSizePx: number;
+  lineHeightPx: number;
+  letterSpacing?: string;
+};
+
+/**
+ * Pick three rows from the deterministic typography guide (preferred) or fall
+ * back to scanned typography. Sizes are clamped so the tile renders cleanly at
+ * narrow widths.
+ */
+function buildTypeLadder(profile: BrandProfile): TypeLadderRow[] {
+  const guide = profile.meta.typographyGuide ?? [];
+  const primaryFamily =
+    profile.fonts.find((f) => f.role === "primary")?.family ??
+    profile.typography[0]?.fontFamily ??
+    "system-ui, sans-serif";
+
+  const fromGuide = (role: string): TypeLadderRow | undefined => {
+    const e = guide.find((g) => g.role === role);
+    if (!e) return undefined;
+    return {
+      label: role,
+      sample: role === "h1" ? "Aa" : role.startsWith("h") ? "Heading" : role === "caption" ? "Caption" : "Body text",
+      fontFamily: e.fontFamily,
+      fontWeight: e.fontWeight,
+      fontSizePx: e.fontSizePx,
+      lineHeightPx: e.lineHeightPx,
+      letterSpacing: e.letterSpacing,
+    };
+  };
+
+  if (guide.length > 0) {
+    const h1 = fromGuide("h1");
+    const body = fromGuide("body1");
+    const caption = fromGuide("caption");
+    const rows = [h1, body, caption].filter(Boolean) as TypeLadderRow[];
+    if (rows.length > 0) return rows;
+  }
+
   const heading =
     profile.typography.find((t) => t.category === "heading") ??
     profile.typography[0];
   const body =
     profile.typography.find((t) => t.category === "body") ??
     profile.typography.find((t) => /body|base/.test(t.name));
-  const headingFamily =
-    heading?.fontFamily ??
-    profile.fonts.find((f) => f.role === "primary")?.family ??
-    "system-ui";
-  const bodyFamily = body?.fontFamily ?? headingFamily;
+  const utility =
+    profile.typography.find((t) => t.category === "utility") ??
+    profile.typography.find((t) => /xs|caption|small/.test(t.name));
+
+  const ladder: TypeLadderRow[] = [];
+  if (heading) {
+    ladder.push({
+      label: heading.category,
+      sample: "Aa",
+      fontFamily: heading.fontFamily ?? primaryFamily,
+      fontWeight: heading.fontWeightNumeric || 600,
+      fontSizePx: heading.fontSizePx,
+      lineHeightPx: heading.lineHeightPx ?? Math.round(heading.fontSizePx * 1.2),
+    });
+  }
+  if (body) {
+    ladder.push({
+      label: body.category,
+      sample: "Body text",
+      fontFamily: body.fontFamily ?? primaryFamily,
+      fontWeight: body.fontWeightNumeric || 400,
+      fontSizePx: body.fontSizePx,
+      lineHeightPx: body.lineHeightPx ?? Math.round(body.fontSizePx * 1.5),
+    });
+  }
+  if (utility && utility !== heading && utility !== body) {
+    ladder.push({
+      label: utility.category,
+      sample: "Caption",
+      fontFamily: utility.fontFamily ?? primaryFamily,
+      fontWeight: utility.fontWeightNumeric || 400,
+      fontSizePx: utility.fontSizePx,
+      lineHeightPx: utility.lineHeightPx ?? Math.round(utility.fontSizePx * 1.4),
+    });
+  }
+  return ladder;
+}
+
+export function TypographyPreview({ profile, href, count }: TileProps) {
+  const ladder = buildTypeLadder(profile);
+  const familyName =
+    stripStack(ladder[0]?.fontFamily) ||
+    stripStack(profile.fonts.find((f) => f.role === "primary")?.family) ||
+    "Primary font";
+
+  // Cap visual sizes so the tile stays compact even when the scanned base size
+  // is huge. Order matters — first row is the biggest.
+  const visualCaps = [28, 14, 11];
+
   return (
     <TileFrame label="Typography" count={count} href={href}>
-      <div className="flex w-full flex-col gap-1.5 leading-tight">
-        <span
-          style={{ fontFamily: headingFamily, fontWeight: 600, fontSize: 22 }}
-          className="text-[var(--text-primary)]"
-        >
-          Aa
+      {ladder.length === 0 ? (
+        <span className="text-[12px] text-[var(--text-tertiary)]">
+          No type tokens detected.
         </span>
-        <span
-          style={{ fontFamily: bodyFamily, fontWeight: 400, fontSize: 12 }}
-          className="text-[var(--text-secondary)]"
-        >
-          {heading?.fontFamily?.split(",")[0] ?? "Primary font"}
-        </span>
-      </div>
+      ) : (
+        <div className="flex w-full flex-col gap-1.5">
+          {ladder.map((row, i) => {
+            const visualPx = Math.min(row.fontSizePx, visualCaps[i] ?? 12);
+            return (
+              <span
+                key={`${row.label}-${i}`}
+                title={`${row.label} · ${row.fontSizePx}/${row.lineHeightPx}px · ${row.fontWeight}`}
+                style={{
+                  fontFamily: row.fontFamily,
+                  fontWeight: row.fontWeight,
+                  fontSize: visualPx,
+                  lineHeight: 1.15,
+                  letterSpacing: row.letterSpacing,
+                }}
+                className="block truncate text-[var(--text-primary)]"
+              >
+                {row.sample}
+              </span>
+            );
+          })}
+          <span className="mt-0.5 truncate font-[var(--font-geist-mono)] text-[10px] text-[var(--text-tertiary)]">
+            {familyName}
+          </span>
+        </div>
+      )}
     </TileFrame>
   );
 }
